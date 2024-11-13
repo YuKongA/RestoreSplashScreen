@@ -174,23 +174,24 @@ object IconHookHandler : BaseHookHandler() {
 
         // 不使用自带的图标缩放, 防止在 MIUI 上出现图标白边及图标错位
         NewSystemUIHooker.Members.normalizeAndWrapToAdaptiveIcon.addBeforeHook {
+            printLog("normalizeAndWrapToAdaptiveIcon(): avoid shrink icon by system ui")
+            val drawable = args.first { it is Drawable } as Drawable
+            val scale = instance.current()
+                .method { name = "getNormalizer"; superClass() }.call()!!.current()
+                .method { name = "getScale"; paramCount(4); superClass() }
+                .invoke<Float>(args.first { it is Drawable }, args.first { it is RectF }, null, null)!!
+            args(args.indexOfFirst { it is FloatArray }).cast<FloatArray>()!![0] = scale
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                val drawable = args.first { it is Drawable } as Drawable
                 if (drawable !is AdaptiveIconDrawable) {
-                    printLog("normalizeAndWrapToAdaptiveIcon(): avoid shrink icon by system ui")
-                    val scaleDrawable = ScaleDrawable(drawable, Gravity.CENTER, 0.296f, 0.296f) // 0.296f 刚好看不到黑边
+                    val scaleDrawable = ScaleDrawable(drawable, Gravity.CENTER, 1 / 3f, 1 / 3f)
                     scaleDrawable.level = 1
-                    val adaptiveIconDrawable = AdaptiveIconDrawable(ColorDrawable(Color.TRANSPARENT), scaleDrawable)
+                    val mWrapperBackgroundColor = instance.current().field { name = "mWrapperBackgroundColor"; superClass() }.int()
+                    val adaptiveIconDrawable = AdaptiveIconDrawable(ColorDrawable(mWrapperBackgroundColor), scaleDrawable)
+                    adaptiveIconDrawable.setBounds(0, 0, 1, 1)
                     result = adaptiveIconDrawable
                 }
             } else {
-                val scale = instance.current()
-                    .method { name = "getNormalizer"; superClass() }.call()!!.current()
-                    .method { name = "getScale"; paramCount(4); superClass() }
-                    .invoke<Float>(args.first { it is Drawable }, args.first { it is RectF }, null, null)!!
-                args(args.indexOfFirst { it is FloatArray }).cast<FloatArray>()!![0] = scale
-                printLog("normalizeAndWrapToAdaptiveIcon(): avoid shrink icon by system ui")
-                result = args.first { it is Drawable } as Drawable
+                result = drawable
             }
         }
         NewSystemUIHooker.Members.createIconBitmap_BaseIconFactory.addBeforeHook {
