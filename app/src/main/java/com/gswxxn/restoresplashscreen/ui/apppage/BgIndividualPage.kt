@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.only
@@ -71,10 +72,9 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Back
-import top.yukonga.miuix.kmp.icon.icons.useful.Info
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 
 /**
@@ -171,7 +171,7 @@ fun BgIndividualPage(
         modifier = Modifier.fillMaxSize(),
         topBar = { contentPadding ->
             TopAppBar(
-                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.background,
+                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.surface,
                 title = stringResource(R.string.configure_bg_colors_individually),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
@@ -186,7 +186,7 @@ fun BgIndividualPage(
                     ) {
                         Icon(
                             modifier = Modifier.size(26.dp),
-                            imageVector = MiuixIcons.Useful.Back,
+                            imageVector = MiuixIcons.Back,
                             contentDescription = "Back",
                             tint = MiuixTheme.colorScheme.onSurfaceSecondary
                         )
@@ -201,14 +201,14 @@ fun BgIndividualPage(
         hazeStyle = HazeStyle(
             blurRadius = 25.dp,
             noiseFactor = 0f,
-            backgroundColor = MiuixTheme.colorScheme.background,
-            tint = HazeTint(MiuixTheme.colorScheme.background.copy(0.67f))
+            backgroundColor = MiuixTheme.colorScheme.surface,
+            tint = HazeTint(MiuixTheme.colorScheme.surface.copy(0.67f))
         ),
         adjustPadding = adjustPadding,
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
-                .height(getWindowSize().height.dp)
+                .fillMaxHeight()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
@@ -240,12 +240,12 @@ fun BgIndividualPage(
                         insideMargin = PaddingValues(16.dp),
                         summary = stringResource(R.string.custom_bg_color_sub_setting_hint),
                         summaryColor = BasicComponentDefaults.titleColor(),
-                        leftAction = {
+                        startAction = {
                             Image(
                                 modifier = Modifier
                                     .padding(end = 8.dp)
                                     .size(20.dp),
-                                imageVector = MiuixIcons.Useful.Info,
+                                imageVector = MiuixIcons.Info,
                                 contentDescription = null,
                                 colorFilter = ColorFilter.tint(MiuixTheme.colorScheme.onSurface)
                             )

@@ -49,18 +49,18 @@ import dev.lackluster.hyperx.compose.preference.PreferenceGroup
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.ListPopup
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.extra.DropdownImpl
 import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.extra.SuperListPopup
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.ImmersionMore
+import top.yukonga.miuix.kmp.icon.extended.MoreCircle
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
@@ -235,16 +235,16 @@ private fun PopUpMenu(
         holdDownState = showTopPopup.value
     ) {
         Icon(
-            imageVector = MiuixIcons.Useful.ImmersionMore,
+            imageVector = MiuixIcons.MoreCircle,
             contentDescription = "Menu"
         )
     }
 
     // 弹出菜单
-    ListPopup(
+    SuperListPopup(
         show = showTopPopup,
         popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-        alignment = PopupPositionProvider.Align.TopRight,
+        alignment = PopupPositionProvider.Align.TopEnd,
         onDismissRequest = {
             showTopPopup.value = false
         }

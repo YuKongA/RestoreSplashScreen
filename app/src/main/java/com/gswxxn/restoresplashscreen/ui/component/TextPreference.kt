@@ -1,6 +1,7 @@
 package com.gswxxn.restoresplashscreen.ui.component
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -27,8 +28,12 @@ fun TextPreference(
     SuperArrow(
         title = title,
         summary = summary,
-        leftAction = { icon?.let { DrawableResIcon(it) } },
-        rightText = value,
+        startAction = { icon?.let { DrawableResIcon(it) } },
+        endActions = {
+            if (!value.isNullOrEmpty()) {
+                Text(value)
+            }
+        },
         insideMargin = PaddingValues((icon?.getHorizontalPadding() ?: 16.dp), 16.dp, 16.dp, 16.dp),
         onClick = {
             if (!YukiHookAPI.Status.isXposedModuleActive && !ignoreModuleActiveStatus) {

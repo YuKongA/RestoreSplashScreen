@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -129,9 +130,8 @@ import top.yukonga.miuix.kmp.extra.SpinnerEntry
 import top.yukonga.miuix.kmp.extra.SuperArrow
 import top.yukonga.miuix.kmp.extra.SuperSpinner
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Back
+import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import kotlin.math.pow
 import kotlin.math.round
@@ -151,7 +151,7 @@ fun ColorPickerPage(
 
     // 顶部栏模糊状态
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    val hazeTint = MiuixTheme.colorScheme.background.copy(
+    val hazeTint = MiuixTheme.colorScheme.surface.copy(
         if (scrollBehavior.state.collapsedFraction <= 0f) 1f
         else lerp(1f, 0.67f, (scrollBehavior.state.collapsedFraction))
     )
@@ -177,7 +177,7 @@ fun ColorPickerPage(
         hazeStyle = HazeStyle(
             blurRadius = 25.dp,
             noiseFactor = 0f,
-            backgroundColor = MiuixTheme.colorScheme.background,
+            backgroundColor = MiuixTheme.colorScheme.surface,
             tint = HazeTint(hazeTint)
         ),
         adjustPadding = adjustPadding,
@@ -202,7 +202,7 @@ fun ColorPickerPage(
         content = { paddingValues ->
             LazyColumn(
                 modifier = Modifier
-                    .height(getWindowSize().height.dp)
+                    .fillMaxHeight()
                     .overScrollVertical()
                     .nestedScroll(scrollBehavior.nestedScrollConnection),
                 state = listState,
@@ -264,7 +264,7 @@ private fun TopBar(
             0.dp
     )
     TopAppBar(
-        color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.background,
+        color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.surface,
         title = appName,
         scrollBehavior = scrollBehavior,
         navigationIcon = {
@@ -277,7 +277,7 @@ private fun TopBar(
             ) {
                 Icon(
                     modifier = Modifier.size(26.dp),
-                    imageVector = MiuixIcons.Useful.Back,
+                    imageVector = MiuixIcons.Back,
                     contentDescription = "Back",
                     tint = MiuixTheme.colorScheme.onSurfaceSecondary
                 )
@@ -539,7 +539,9 @@ private fun InputColor(
     val context = LocalContext.current
     SuperArrow(
         title = stringResource(R.string.manual_input),
-        rightText = "#" + "%08X".format(pickedColor.colorInt).substring(2),
+        startAction = {
+            Text("#" + "%08X".format(pickedColor.colorInt).substring(2))
+        },
         insideMargin = PaddingValues(16.dp),
         onClick = { dialogVisibility.value = true }
     )
@@ -691,12 +693,13 @@ private fun BottomBar(
     val buttonPaddingValues = with(LocalLayoutDirection.current) {
         PaddingValues(
             start = contentPadding.calculateStartPadding(this) + 16.dp,
-            top = 12.dp,
+            top = 16.dp,
             end = contentPadding.calculateEndPadding(this) + 16.dp,
-            bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + captionBarBottomPadding + 12.dp
+            bottom = WindowInsets.navigationBars.asPaddingValues()
+                .calculateBottomPadding() + captionBarBottomPadding + 16.dp
         )
     }
-    Surface(color = MiuixTheme.colorScheme.background.copy(if (blurEnabled.value) 0f else 1f)) {
+    Surface(color = MiuixTheme.colorScheme.surface.copy(if (blurEnabled.value) 0f else 1f)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -834,7 +837,7 @@ private fun IntColorSeekBar(
             modifier = Modifier,
             insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 12.dp),
             title = title,
-            rightActions = {
+            endActions = {
                 Text(
                     text = "$value / 255",
                     fontSize = MiuixTheme.textStyles.body2.fontSize,
@@ -870,7 +873,7 @@ private fun HueSeekBar(
             modifier = Modifier,
             insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 12.dp),
             title = title,
-            rightActions = {
+            endActions = {
                 Text(
                     text = "${value.let { it1 -> "%.2f".format(it1) }} / ${"%.2f".format(360.0f)}",
                     fontSize = MiuixTheme.textStyles.body2.fontSize,
@@ -973,7 +976,7 @@ private fun FloatColorSeekBar(
             modifier = Modifier,
             insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 12.dp),
             title = title,
-            rightActions = {
+            endActions = {
                 Text(
                     text = "${"%.2f".format(value)} / 1.0",
                     fontSize = MiuixTheme.textStyles.body2.fontSize,

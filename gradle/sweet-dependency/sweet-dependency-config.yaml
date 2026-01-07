@@ -22,15 +22,15 @@ repositories:
 
 plugins:
   com.android.application:
-    version: 8.13.0
+    version: 8.13.2
   com.google.devtools.ksp:
-    version: 2.3.0
+    version: 2.3.4
   org.jetbrains.kotlin.android:
-    version: 2.2.21
+    version: 2.3.0
   org.jetbrains.kotlin.plugin.compose:
-    version: 2.2.21
+    version: 2.3.0
   org.jetbrains.kotlin.plugin.serialization:
-    version: 2.2.21
+    version: 2.3.0
 
 libraries:
   de.robv.android.xposed:

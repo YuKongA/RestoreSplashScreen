@@ -3,6 +3,7 @@ package com.gswxxn.restoresplashscreen.ui.component
 import android.content.pm.ApplicationInfo
 import android.graphics.drawable.Drawable
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -77,11 +79,11 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.HorizontalDivider
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
 import top.yukonga.miuix.kmp.basic.InputField
-import top.yukonga.miuix.kmp.basic.ListPopup
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -92,14 +94,12 @@ import top.yukonga.miuix.kmp.basic.Surface
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
-import top.yukonga.miuix.kmp.extra.DropdownImpl
+import top.yukonga.miuix.kmp.extra.SuperListPopup
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Back
-import top.yukonga.miuix.kmp.icon.icons.useful.ImmersionMore
-import top.yukonga.miuix.kmp.icon.icons.useful.Info
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Info
+import top.yukonga.miuix.kmp.icon.extended.MoreCircle
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.BackHandler
-import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
@@ -259,7 +259,7 @@ fun AppListPage(
             .scrollEndHaptic(),
         topBar = { contentPadding ->
             TopAppBar(
-                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.background,
+                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.surface,
                 title = title,
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
@@ -281,7 +281,7 @@ fun AppListPage(
                     ) {
                         Icon(
                             modifier = Modifier.size(26.dp),
-                            imageVector = MiuixIcons.Useful.Back,
+                            imageVector = MiuixIcons.Back,
                             contentDescription = "Back",
                             tint = MiuixTheme.colorScheme.onSurfaceSecondary
                         )
@@ -289,10 +289,10 @@ fun AppListPage(
                 },
                 actions = {
                     if (isTopPopupExpanded.value) {
-                        ListPopup(
+                        SuperListPopup(
                             show = showTopPopup,
                             popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-                            alignment = PopupPositionProvider.Align.TopRight,
+                            alignment = PopupPositionProvider.Align.TopEnd,
                             onDismissRequest = {
                                 showTopPopup.value = false
                                 isTopPopupExpanded.value = false
@@ -340,7 +340,7 @@ fun AppListPage(
                             }
                         ) {
                             Icon(
-                                imageVector = MiuixIcons.Useful.ImmersionMore,
+                                imageVector = MiuixIcons.MoreCircle,
                                 contentDescription = "Menu"
                             )
                         }
@@ -356,15 +356,15 @@ fun AppListPage(
             )
             val buttonPaddingValues = with(LocalLayoutDirection.current) {
                 PaddingValues(
-                    start = contentPadding.calculateStartPadding(this) + 28.dp,
-                    top = 23.dp,
-                    end = contentPadding.calculateEndPadding(this) + 28.dp,
+                    start = contentPadding.calculateStartPadding(this) + 16.dp,
+                    top = 16.dp,
+                    end = contentPadding.calculateEndPadding(this) + 16.dp,
                     bottom = WindowInsets.navigationBars.asPaddingValues()
-                        .calculateBottomPadding() + captionBarBottomPadding + 28.dp
+                        .calculateBottomPadding() + captionBarBottomPadding + 16.dp
                 )
             }
             Surface(
-                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.background,
+                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.surface,
             ) {
                 Column(
                     modifier = Modifier
@@ -406,14 +406,14 @@ fun AppListPage(
         hazeStyle = HazeStyle(
             blurRadius = 25.dp,
             noiseFactor = 0f,
-            backgroundColor = MiuixTheme.colorScheme.background,
-            tint = HazeTint(MiuixTheme.colorScheme.background.copy(0.67f))
+            backgroundColor = MiuixTheme.colorScheme.surface,
+            tint = HazeTint(MiuixTheme.colorScheme.surface.copy(0.67f))
         ),
         adjustPadding = adjustPadding,
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
-                .height(getWindowSize().height.dp)
+                .fillMaxHeight()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
@@ -445,12 +445,12 @@ fun AppListPage(
                         insideMargin = PaddingValues(start = 16.dp, top = 16.dp, bottom = 16.dp),
                         summary = stringResource(R.string.save_hint),
                         summaryColor = BasicComponentDefaults.titleColor(),
-                        leftAction = {
+                        startAction = {
                             Image(
                                 modifier = Modifier
                                     .padding(end = 8.dp)
                                     .size(20.dp),
-                                imageVector = MiuixIcons.Useful.Info,
+                                imageVector = MiuixIcons.Info,
                                 contentDescription = null,
                                 colorFilter = ColorFilter.tint(MiuixTheme.colorScheme.onSurface)
                             )
@@ -541,7 +541,7 @@ fun SpliceCard(
                 bottom = if (bottomCornerRadius != 0.dp) 6.dp else 0.dp
             ),
         shape = shape,
-        color = MiuixTheme.colorScheme.surface,
+        color = MiuixTheme.colorScheme.surfaceContainer,
         contentColor = MiuixTheme.colorScheme.onSurface
     ) {
         Column(

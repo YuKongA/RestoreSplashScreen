@@ -2,6 +2,7 @@ package com.gswxxn.restoresplashscreen.ui.apppage
 
 import android.graphics.drawable.Drawable
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -96,11 +98,9 @@ import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Back
-import top.yukonga.miuix.kmp.icon.icons.useful.Info
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.utils.BackHandler
-import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import java.text.Collator
 import java.util.Locale
@@ -119,7 +119,7 @@ fun MinDurationPage(
 //    val checkedListKey = DataConst.MIN_DURATION_LIST.key
 //    val configMapKey = DataConst.MIN_DURATION_CONFIG_MAP.key
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    val hazeTint = MiuixTheme.colorScheme.background.copy(
+    val hazeTint = MiuixTheme.colorScheme.surface.copy(
         if (scrollBehavior.state.collapsedFraction <= 0f) 1f
         else lerp(1f, 0.67f, (scrollBehavior.state.collapsedFraction))
     )
@@ -242,7 +242,7 @@ fun MinDurationPage(
         modifier = Modifier.fillMaxSize(),
         topBar = { contentPadding ->
             TopAppBar(
-                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.background,
+                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.surface,
                 title = stringResource(R.string.min_duration_title),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
@@ -269,7 +269,7 @@ fun MinDurationPage(
                     ) {
                         Icon(
                             modifier = Modifier.size(26.dp),
-                            imageVector = MiuixIcons.Useful.Back,
+                            imageVector = MiuixIcons.Back,
                             contentDescription = "Back",
                             tint = MiuixTheme.colorScheme.onSurfaceSecondary
                         )
@@ -286,14 +286,14 @@ fun MinDurationPage(
             val buttonPaddingValues = with(LocalLayoutDirection.current) {
                 PaddingValues(
                     start = contentPadding.calculateStartPadding(this) + 16.dp,
-                    top = 12.dp,
+                    top = 16.dp,
                     end = contentPadding.calculateEndPadding(this) + 16.dp,
                     bottom = WindowInsets.navigationBars.asPaddingValues()
-                        .calculateBottomPadding() + captionBarBottomPadding + 12.dp
+                        .calculateBottomPadding() + captionBarBottomPadding + 16.dp
                 )
             }
             Surface(
-                color = MiuixTheme.colorScheme.background.copy(
+                color = MiuixTheme.colorScheme.surface.copy(
                     if (blurEnabled.value) 0f else 1f
                 ),
             ) {
@@ -352,14 +352,14 @@ fun MinDurationPage(
         hazeStyle = HazeStyle(
             blurRadius = 25.dp,
             noiseFactor = 0f,
-            backgroundColor = MiuixTheme.colorScheme.background,
+            backgroundColor = MiuixTheme.colorScheme.surface,
             tint = HazeTint(hazeTint)
         ),
         adjustPadding = adjustPadding,
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
-                .height(getWindowSize().height.dp)
+                .fillMaxHeight()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             state = listState,
@@ -390,12 +390,12 @@ fun MinDurationPage(
                         insideMargin = PaddingValues(16.dp),
                         summary = stringResource(R.string.min_duration_sub_setting_hint),
                         summaryColor = BasicComponentDefaults.titleColor(),
-                        leftAction = {
+                        startAction = {
                             Image(
                                 modifier = Modifier
                                     .padding(end = 8.dp)
                                     .size(20.dp),
-                                imageVector = MiuixIcons.Useful.Info,
+                                imageVector = MiuixIcons.Info,
                                 contentDescription = null,
                                 colorFilter = ColorFilter.tint(MiuixTheme.colorScheme.onSurface)
                             )
@@ -518,12 +518,12 @@ fun MinDurationPreference(
     BasicComponent(
         title = title,
         summary = summary,
-        leftAction = {
+        startAction = {
             icon?.let {
                 DrawableResIcon(it)
             }
         },
-        rightActions = {
+        endActions = {
             Text(
                 modifier = Modifier
                     .widthIn(max = 130.dp)

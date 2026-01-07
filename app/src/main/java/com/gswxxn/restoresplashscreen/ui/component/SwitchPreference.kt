@@ -38,7 +38,7 @@ fun SwitchPreference(
     SuperSwitch(
         title = title,
         summary = summary,
-        leftAction = { icon?.let { DrawableResIcon(it) } },
+        startAction = { icon?.let { DrawableResIcon(it) } },
         checked = currentChecked.value,
         onCheckedChange = { newValue ->
             if (!YukiHookAPI.Status.isXposedModuleActive) {

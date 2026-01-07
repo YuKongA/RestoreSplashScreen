@@ -2,9 +2,6 @@ package com.gswxxn.restoresplashscreen.ui
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,12 +38,13 @@ import com.gswxxn.restoresplashscreen.ui.page.ScopePage
 import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.hook.factory.dataChannel
 import com.highcapable.yukihookapi.hook.factory.prefs
+import dev.lackluster.hyperx.compose.activity.HyperXActivity
 import dev.lackluster.hyperx.compose.activity.SafeSP
 import dev.lackluster.hyperx.compose.base.HyperXApp
 import dev.lackluster.hyperx.compose.navigation.miuixComposable
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : HyperXActivity() {
     companion object {
         val moduleActive: MutableState<Boolean> = mutableStateOf(false)
         val devMode: MutableState<Boolean> = mutableStateOf(false)
@@ -58,26 +56,18 @@ class MainActivity : ComponentActivity() {
     }
 
     @SuppressLint("WorldReadableFiles")
-    @SuppressWarnings("deprecation")
+    @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
         try {
-            SafeSP.setSP(
-                getSharedPreferences("${packageName ?: "unknown"}_preferences", MODE_WORLD_READABLE)
-            )
-        } catch (_: SecurityException) {
+            SafeSP.setSP(getSharedPreferences("${packageName ?: "unknown"}_preferences", MODE_WORLD_READABLE))
+        } finally {
         }
 
         devMode.value = prefs().get(DataConst.ENABLE_DEV_SETTINGS)
         blurEnabled.value = prefs().get(DataConst.MODULE_APP_BLUR)
         splitEnabled.value = prefs().get(DataConst.SPLIT_VIEW)
 
-        enableEdgeToEdge()
-        window.isNavigationBarContrastEnforced = false
-        setContent {
-            AppContent()
-        }
+        super.onCreate(savedInstanceState)
     }
 
     override fun onResume() {
@@ -92,7 +82,7 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun AppContent() {
+    override fun AppContent() {
         HyperXApp(
             autoSplitView = splitEnabled,
             mainPageContent = { navController, adjustPadding, mode ->
