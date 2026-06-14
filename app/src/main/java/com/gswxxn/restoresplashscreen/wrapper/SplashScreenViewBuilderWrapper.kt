@@ -1,7 +1,9 @@
 package com.gswxxn.restoresplashscreen.wrapper
 
 import android.graphics.drawable.Drawable
-import com.highcapable.yukihookapi.hook.factory.current
+import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
+import com.gswxxn.restoresplashscreen.hook.utils.toTyped
+import com.highcapable.kavaref.KavaRef.Companion.resolve
 
 /**
  * SplashScreenView.Builder 的包装类
@@ -34,86 +36,86 @@ class SplashScreenViewBuilderWrapper private constructor(private val builder: An
      * Get the rectangle size for the center view.
      */
     fun getIconSize() =
-        builder.current().field { name = "mIconSize" }.int()
+        builder.javaClass.resolve().firstField { name = "mIconSize" }.getValueFrom<Any, Int>(builder)!!
 
     /**
      * Get the background color for the view.
      */
     fun getBackgroundColor() =
-        builder.current().field { name = "mBackgroundColor" }.int()
+        builder.javaClass.resolve().firstField { name = "mBackgroundColor" }.getValueFrom<Any, Int>(builder)!!
 
     /**
      * Get the Drawable object to fill the entire view.
      */
     fun getOverlayDrawable() =
-        builder.current().field { name = "mOverlayDrawable" }.cast<Drawable>()
+        builder.javaClass.resolve().firstField { name = "mOverlayDrawable" }.getValueFrom<Any, Drawable>(builder)
 
     /**
      * Get the Drawable object to fill the center view.
      */
     fun getCenterViewDrawable() =
-        builder.current().field { name = "mIconDrawable" }.cast<Drawable>()
+        builder.javaClass.resolve().firstField { name = "mIconDrawable" }.getValueFrom<Any, Drawable>(builder)
 
     /**
      * Get the background color for the icon.
      */
     fun getIconBackground() =
-        builder.current().field { name = "mIconBackground" }.cast<Drawable>()
+        builder.javaClass.resolve().firstField { name = "mIconBackground" }.getValueFrom<Any, Drawable>(builder)
 
     /**
      * Get the Drawable object and size for the branding view.
      */
     fun getBrandingDrawable() =
-        builder.current().field { name = "mBrandingDrawable" }.cast<Drawable>()
+        builder.javaClass.resolve().firstField { name = "mBrandingDrawable" }.getValueFrom<Any, Drawable>(builder)
 
     /**
      * Get whether this view can be copied and transferred to the client if the view is
      * an empty style splash screen.
      */
     fun getAllowHandleSolidColor() =
-        builder.current().field { name = "mAllowHandleSolidColor" }.boolean()
+        builder.javaClass.resolve().firstField { name = "mAllowHandleSolidColor" }.getValueFrom<Any, Boolean>(builder)!!
 
     /**
      * Set the rectangle size for the center view.
      */
     fun setIconSize(iconSize: Int) =
-        builder.current().method { name = "setIconSize" }.call(iconSize)
+        builder.javaClass.resolve().firstMethod { name = "setIconSize" }.toTyped<Any>().invoke(builder, iconSize)
 
     /**
      * Set the background color for the view.
      */
     fun setBackgroundColor(backgroundColor: Int) =
-        builder.current().method { name = "setBackgroundColor" }.call(backgroundColor)
+        builder.javaClass.resolve().firstMethod { name = "setBackgroundColor" }.toTyped<Any>().invoke(builder, backgroundColor)
 
     /**
      * Set the Drawable object to fill the entire view.
      */
     fun setOverlayDrawable(drawable: Drawable?) =
-        builder.current().method { name = "setOverlayDrawable" }.call(drawable)
+        builder.javaClass.resolve().firstMethod { name = "setOverlayDrawable" }.toTyped<Any>().invoke(builder, drawable)
 
     /**
      * Set the Drawable object to fill the center view.
      */
     fun setCenterViewDrawable(drawable: Drawable?) =
-        builder.current().method { name = "setCenterViewDrawable" }.call(drawable)
+        builder.javaClass.resolve().firstMethod { name = "setCenterViewDrawable" }.toTyped<Any>().invoke(builder, drawable)
 
     /**
      * Set the background color for the icon.
      */
     fun setIconBackground(iconBackground: Drawable) =
-        builder.current().method { name = "setIconBackground" }.call(iconBackground)
+        builder.javaClass.resolve().firstMethod { name = "setIconBackground" }.toTyped<Any>().invoke(builder, iconBackground)
 
     /**
      * Set the Drawable object and size for the branding view.
      */
     fun setBrandingDrawable(branding: Drawable?, width: Int, height: Int) =
-        builder.current().method { name = "setBrandingDrawable" }.call(branding, width, height)
+        builder.javaClass.resolve().firstMethod { name = "setBrandingDrawable" }.toTyped<Any>().invoke(builder, branding, width, height)
 
     /**
      * Sets whether this view can be copied and transferred to the client if the view is
      * an empty style splash screen.
      */
     fun setAllowHandleSolidColor(allowHandleSolidColor: Boolean) =
-        builder.current().method { name = "setAllowHandleSolidColor" }.call(allowHandleSolidColor)
+        builder.javaClass.resolve().firstMethod { name = "setAllowHandleSolidColor" }.toTyped<Any>().invoke(builder, allowHandleSolidColor)
 
 }

@@ -33,13 +33,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.gswxxn.restoresplashscreen.R
-import com.gswxxn.restoresplashscreen.data.DataConst
 import com.gswxxn.restoresplashscreen.data.Route
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.ui.component.MyAppInfo
 import com.gswxxn.restoresplashscreen.ui.component.SpliceCard
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
-import com.highcapable.yukihookapi.hook.factory.prefs
+import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
 import dev.lackluster.hyperx.navigation.LocalNavigator
 import dev.lackluster.hyperx.ui.component.IconSize
 import dev.lackluster.hyperx.ui.component.ImageIcon
@@ -52,6 +52,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.BasicComponentDefaults
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -69,6 +70,7 @@ import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 单独配置背景颜色
@@ -76,6 +78,7 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 @Composable
 fun BgIndividualPage() {
     val context = LocalContext.current
+    val store = koinInject<RemotePreferenceStore>()
 
     val navigator = LocalNavigator.current
     val uiConfig = LocalHyperXLayoutConfig.current
@@ -108,11 +111,11 @@ fun BgIndividualPage() {
             isLoading = true
             // 使用 IO 调度器进行耗时操作
             val loadedApps = withContext(Dispatchers.IO) {
-                val configMapPrefs =
-                    if (deviceDarkMode) DataConst.INDIVIDUAL_BG_COLOR_APP_MAP_DARK else DataConst.INDIVIDUAL_BG_COLOR_APP_MAP
+                val configMapKey =
+                    if (deviceDarkMode) Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP_DARK else Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP
                 val tmpCheckedList = mutableMapOf<String, String>().apply {
                     clear()
-                    putAll(context.prefs().get(configMapPrefs).toMap())
+                    putAll(store.get(configMapKey).toMap())
                 }
                 val pm = context.packageManager
                 val installedApps = pm.getInstalledApplications(0)
@@ -141,9 +144,9 @@ fun BgIndividualPage() {
         queryJob = launch(Dispatchers.Default) {
             // 添加防抖延迟
             if (queryString.isNotBlank()) {
-                delay(300)
+                delay(300.milliseconds)
             } else {
-                delay(50)
+                delay(50.milliseconds)
             }
 
             // 在后台线程进行过滤

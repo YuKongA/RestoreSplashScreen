@@ -12,16 +12,17 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.gswxxn.restoresplashscreen.BuildConfig
 import com.gswxxn.restoresplashscreen.R
-import com.gswxxn.restoresplashscreen.data.DataConst
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.ui.component.HeaderCard
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.BackupUtils
-import com.highcapable.yukihookapi.hook.factory.prefs
+import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
 import dev.lackluster.hyperx.ui.layout.HyperXPage
 import dev.lackluster.hyperx.ui.preference.ItemPosition
 import dev.lackluster.hyperx.ui.preference.PreferenceGroup
+import org.koin.compose.koinInject
 import java.time.LocalDateTime
 
 /**
@@ -59,12 +60,12 @@ private fun SettingItems() {
 @Composable
 private fun ModuleAppSettings() {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val store = koinInject<RemotePreferenceStore>()
 
-    val enableLog = remember { mutableStateOf(prefs.get(DataConst.ENABLE_LOG)) }
+    val enableLog = remember { mutableStateOf(store.get(Preferences.Log.ENABLE_LOG)) }
     LaunchedEffect(Unit) {
-        if (enableLog.value && (System.currentTimeMillis() - prefs.get(DataConst.ENABLE_LOG_TIMESTAMP)) > 86400000) {
-            prefs.edit { put(DataConst.ENABLE_LOG, false) }
+        if (enableLog.value && (System.currentTimeMillis() - store.get(Preferences.Log.ENABLE_LOG_TIMESTAMP)) > 86400000) {
+            store.put(Preferences.Log.ENABLE_LOG, false)
             enableLog.value = false
         }
     }
@@ -73,17 +74,17 @@ private fun ModuleAppSettings() {
     SwitchPreference(
         title = stringResource(R.string.enable_log),
         summary = stringResource(R.string.enable_log_tips),
-        prefsData = DataConst.ENABLE_LOG,
+        key = Preferences.Log.ENABLE_LOG,
         checked = enableLog
     ) {
         if (it) {
-            prefs.edit { put(DataConst.ENABLE_LOG_TIMESTAMP, System.currentTimeMillis()) }
+            store.put(Preferences.Log.ENABLE_LOG_TIMESTAMP, System.currentTimeMillis())
         }
     }
     // 隐藏桌面图标
     SwitchPreference(
         title = stringResource(R.string.hide_icon),
-        prefsData = DataConst.ENABLE_HIDE_ICON
+        key = Preferences.Icon.ENABLE_HIDE_ICON
     ) {
         val newState = if (it) {
             PackageManager.COMPONENT_ENABLED_STATE_DISABLED
@@ -99,14 +100,14 @@ private fun ModuleAppSettings() {
     // 模糊效果
     SwitchPreference(
         title = stringResource(R.string.blur),
-        prefsData = DataConst.MODULE_APP_BLUR,
+        key = Preferences.Module.MODULE_APP_BLUR,
         onCheckedChange = { MainActivity.blurEnabled.value = it }
     )
     // 自适应布局
     SwitchPreference(
         title = stringResource(R.string.split_view),
         summary = stringResource(R.string.split_view_tips),
-        prefsData = DataConst.SPLIT_VIEW,
+        key = Preferences.Module.SPLIT_VIEW,
         onCheckedChange = { MainActivity.splitEnabled.value = it }
     )
 }

@@ -14,7 +14,7 @@
     <color name="demoText">#FF666666</color>
     <color name="demoIcon">#FF333333</color>
     <color name="brandColor">#FF000000</color>
-    
+
     <color name="topCardBackground">#FFDFFAE4</color>
     <color name="topWarningCardBackground">#FFF8E2E2</color>
 </resources>

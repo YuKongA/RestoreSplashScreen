@@ -5,24 +5,19 @@ import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
+import android.os.UserHandle
 import android.provider.Settings
-import com.gswxxn.restoresplashscreen.hook.AndroidHooker.appContext
-import com.gswxxn.restoresplashscreen.hook.AndroidHooker.hook
+import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
+import com.gswxxn.restoresplashscreen.hook.base.HookManager
 import com.gswxxn.restoresplashscreen.hook.systemui.IconHookHandler.getActivityIconOrApp
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.isMIUI
-import com.highcapable.yukihookapi.hook.factory.current
-import com.highcapable.yukihookapi.hook.factory.field
-import com.highcapable.yukihookapi.hook.factory.method
-import com.highcapable.yukihookapi.hook.factory.toClass
-import com.highcapable.yukihookapi.hook.factory.toClassOrNull
-import com.highcapable.yukihookapi.hook.log.YLog
-import com.highcapable.yukihookapi.hook.type.android.ApplicationInfoClass
-import com.highcapable.yukihookapi.hook.type.android.ContextClass
-import com.highcapable.yukihookapi.hook.type.android.UserHandleClass
-import com.highcapable.yukihookapi.hook.type.java.BooleanType
-import com.highcapable.yukihookapi.hook.type.java.JavaClass
-import com.highcapable.yukihookapi.hook.type.java.LongType
-import com.highcapable.yukihookapi.hook.type.java.StringClass
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
+import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
+import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
+import com.gswxxn.restoresplashscreen.hook.utils.toTyped
+import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
+import com.highcapable.kavaref.extension.toClass
+import com.highcapable.kavaref.extension.toClassOrNull
 
 /**
  * 用于从 MIUI 桌面检索大图标的辅助类
@@ -33,53 +28,61 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
         "com.miui.home",
         Context.CONTEXT_INCLUDE_CODE or Context.CONTEXT_IGNORE_SECURITY
     )
+
     private val largeIconsHelperClazz =
-        if (YukiHelper.atLeastMIUI14)
-            "com.miui.maml.util.LargeIconsHelper".toClass(miuiHomeContext.classLoader)
-        else null
+        "com.miui.maml.util.LargeIconsHelper".toClass(loader = miuiHomeContext.classLoader)
+
     private val dependencyClazz by lazy {
-        "com.miui.systemui.MiuiDependency".toClassOrNull(classLoader)
-            ?: "com.android.systemui.Dependency".toClassOrNull(classLoader)
+        "com.miui.systemui.MiuiDependency".toClassOrNull(loader = classLoader)
+            ?: "com.android.systemui.Dependency".toClassOrNull(loader = classLoader)
     }
+
     private val mDependencyGet by lazy {
-        dependencyClazz?.method {
+        dependencyClazz?.resolve()?.optional()?.firstMethodOrNull {
             name = "get"
-            paramCount(1)
-            param(JavaClass)
-        }?.ignored()?.give()
+            parameterCount = 1
+            parameters(Class::class)
+        }?.self
     }
+
     private val interfacesImplManagerClazz by lazy {
-        "com.miui.systemui.interfacesmanager.InterfacesImplManager".toClassOrNull(classLoader)
+        "com.miui.systemui.interfacesmanager.InterfacesImplManager".toClassOrNull(loader = classLoader)
     }
+
     private val mImplManagerGet by lazy {
-        interfacesImplManagerClazz?.method {
+        interfacesImplManagerClazz?.resolve()?.optional()?.firstMethodOrNull {
             name = "getImpl"
-            paramCount(1)
-            param(JavaClass)
-        }?.give()
+            parameterCount = 1
+            parameters(Class::class)
+        }?.self
     }
+
     private val appIconsManagerClazz by lazy {
-        "com.miui.systemui.graphics.AppIconsManager".toClass(classLoader)
+        "com.miui.systemui.graphics.AppIconsManager".toClass(loader = classLoader)
     }
+
     private val loadAppIcon by lazy {
         appIconsManagerClazz.getDeclaredMethod(
             "loadAppIcon",
-            StringClass, Int::class.java, ApplicationInfoClass, PackageManager::class.java
+            classOf<String>(), classOf<Int>(), classOf<ApplicationInfo>(), classOf<PackageManager>()
         )
     }
+
     private val appIconsManager by lazy {
         mDependencyGet?.invoke(null, appIconsManagerClazz)
             ?: mImplManagerGet?.invoke(null, appIconsManagerClazz)
     }
+
     private val drawableUtilsClazz by lazy {
-        "com.miui.utils.DrawableUtils".toClass(classLoader)
+        "com.miui.utils.DrawableUtils".toClass(loader = classLoader)
     }
+
     private val getFancyChildOrSelf by lazy {
-        drawableUtilsClazz.method {
+        drawableUtilsClazz.resolve().optional().firstMethodOrNull {
             name = "getFancyChildOrSelf"
-            paramCount(2)
-            param(Drawable::class.java, BooleanType)
-        }.ignored().give()
+            parameterCount = 2
+            parameters(Drawable::class, Boolean::class)
+        }?.self
     }
 
     /** 当前是否启用 MIUI 完美图标 */
@@ -89,47 +92,42 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
 
     init {
         // 防止获取到 System UI 的 Resources
-        "miuix.pickerwidget.date.CalendarFormatSymbols".toClass(miuiHomeContext.classLoader).method {
-            name = "getWeekDays"
-        }.hook {
-            replaceAny {
-                val resources = miuiHomeContext.resources
-                val id = resources.getIdentifier("week_days", "array", "com.miui.home")
-                resources.getStringArray(id)
-            }
-        }
+        HookManager(true) {
+            "miuix.pickerwidget.date.CalendarFormatSymbols".toClassOrNull(loader = miuiHomeContext.classLoader)
+                ?.resolve()?.optional()?.firstMethodOrNull { name = "getWeekDays" }?.self
+        }.addReplaceHook({ true }) {
+            val resources = miuiHomeContext.resources
+            val id = resources.getIdentifier("week_days", "array", "com.miui.home")
+            resources.getStringArray(id)
+        }.startHook(SystemUIHooker.module)
 
         // 为获取完美图标时设置一个缓存时间, 避免获取费时图标(如天气)时, 经常显示不出数据的问题 原调用为固定值 0.
-        "com.miui.maml.util.AppIconsHelper".toClass(miuiHomeContext.classLoader).method {
-            name = "getFancyIconDrawable"
-        }.hook {
-            before {
-                val packageName = args(args.indexOfFirst { it is String }).string()
-                val cacheTimeIndex = args.indexOfFirst { it is Long }
-                args(cacheTimeIndex).set(getCacheTime(packageName))
-            }
-        }
+        HookManager(true) {
+            "com.miui.maml.util.AppIconsHelper".toClassOrNull(loader = miuiHomeContext.classLoader)
+                ?.resolve()?.optional()?.firstMethodOrNull { name = "getFancyIconDrawable" }?.self
+        }.addBeforeHook({ true }) {
+            val packageName = args(args.indexOfFirst { it is String }).string()
+            val cacheTimeIndex = args.indexOfFirst { it is Long }
+            args(cacheTimeIndex).set(getCacheTime(packageName))
+        }.startHook(SystemUIHooker.module)
 
         // 只获取本地天气数据, 不获取网络数据; 参考 https://zhuti.designer.xiaomi.com/docs/blog/weatherApi.html
-        "com.miui.maml.data.ContentProviderBinder".toClass(miuiHomeContext.classLoader).method {
-            name = "getUriText"
-        }.hook {
-            after {
-                if (result == "content://weather/actualWeatherData/1")
-                    result = "content://weather/actualWeatherData/2"
-            }
-        }
+        HookManager(true) {
+            "com.miui.maml.data.ContentProviderBinder".toClassOrNull(loader = miuiHomeContext.classLoader)
+                ?.resolve()?.optional()?.firstMethodOrNull { name = "getUriText" }?.self
+        }.addAfterHook({ true }) {
+            if (result == "content://weather/actualWeatherData/1")
+                result = "content://weather/actualWeatherData/2"
+        }.startHook(SystemUIHooker.module)
 
         // 由于大图标的变更通知不到系统界面, 所以只能每次都重新读取配置
-        if (YukiHelper.atLeastMIUI14) {
-            "com.miui.maml.util.LargeIconsHelper".toClass(miuiHomeContext.classLoader).method {
-                name = "hasLargeIcon"
-            }.hook {
-                before {
-                    largeIconsHelperClazz?.field { name = "sManagerList" }?.get()?.set(null)
-                }
-            }
-        }
+        HookManager(true) {
+            "com.miui.maml.util.LargeIconsHelper".toClassOrNull(loader = miuiHomeContext.classLoader)
+                ?.resolve()?.optional()?.firstMethodOrNull { name = "hasLargeIcon" }?.self
+        }.addBeforeHook({ true }) {
+            largeIconsHelperClazz.resolve().optional().firstFieldOrNull { name = "sManagerList" }
+                ?.setValueTo(null, null)
+        }.startHook(SystemUIHooker.module)
     }
 
     /**
@@ -139,17 +137,18 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
      * @return 如果程序包有大图标则返回 `true`，否则返回 `false`。
      */
     fun hasLargeIcon(packageName: String) = try {
-        largeIconsHelperClazz?.method {
+        largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
             name = "hasLargeIcon"
-            param(StringClass, StringClass, StringClass, UserHandleClass)
-        }?.get()?.boolean(
+            parameters(String::class, String::class, String::class, UserHandle::class)
+        }?.toTyped<Boolean>()?.invoke(
+            null,
             packageName,
             null,
             "desktop",
-            UserHandleClass.field { name = "CURRENT" }.get().any()
+            classOf<UserHandle>().resolve().firstField { name = "CURRENT" }.getValueFrom<UserHandle, Any>(null)
         ) ?: false
     } catch (e: Throwable) {
-        YLog.error(msg = "Failed to get hasLargeIcon for package $packageName", e = e)
+        MLog.e(t = e) { "Failed to get hasLargeIcon for package $packageName" }
         false
     }
 
@@ -160,15 +159,18 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
      * @return 如果成功获取大图标的尺寸则返回该尺寸，否则在捕获异常后返回null。
      */
     fun getLargeIconSize(packageName: String) = try {
-        val iconsConfigs = largeIconsHelperClazz?.method {
+        val iconsConfigs = largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
             name = "getLargeIconConfigFile"
-            param(StringClass, BooleanType)
-        }?.get()?.call("desktop", false)?.current()
-            ?.method { name = "getIconsConfigs" }
-            ?.invoke<HashMap<String, Any>>()
-        iconsConfigs?.get(packageName)?.current()?.field { name = "size" }?.string()
+            parameters(String::class, Boolean::class)
+        }?.toTyped<Any>()?.invoke(null, "desktop", false)?.let { configFile ->
+            configFile.javaClass.resolve().optional().firstMethodOrNull { name = "getIconsConfigs" }
+                ?.toTyped<HashMap<String, Any>>()?.invoke(configFile)
+        }
+        iconsConfigs?.get(packageName)?.let { config ->
+            config.javaClass.resolve().optional().firstFieldOrNull { name = "size" }?.getValueFrom<Any, String>(config)
+        }
     } catch (e: Throwable) {
-        YLog.error(msg = "Failed to get hasLargeIcon for package $packageName", e = e)
+        MLog.e(t = e) { "Failed to get hasLargeIcon for package $packageName" }
         null
     }
 
@@ -179,20 +181,24 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
      * @return 原始大图标可绘制对象，如果未找到则为 null
      */
     fun getLargeIconDrawable(packageName: String) = try {
-        largeIconsHelperClazz?.method {
+        largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
             name = "getLargeIconDrawable"
-            param(ContextClass, StringClass, StringClass, StringClass, StringClass, LongType, UserHandleClass)
-        }?.get()?.call(
+            parameters(Context::class, String::class, String::class, String::class, String::class, Long::class, UserHandle::class)
+        }?.toTyped<Any>()?.invoke(
+            null,
             miuiHomeContext,
             packageName,
             null,
             "desktop",
             null,
             0L,
-            UserHandleClass.field { name = "CURRENT" }.get().any()
-        )?.current()?.method { name = "getDrawable" }?.invoke<Drawable>()
+            classOf<UserHandle>().resolve().firstField { name = "CURRENT" }.getValueFrom<UserHandle, Any>(null)
+        )?.let { largeIcon ->
+            largeIcon.javaClass.resolve().optional().firstMethodOrNull { name = "getDrawable" }
+                ?.toTyped<Drawable>()?.invoke(largeIcon)
+        }
     } catch (e: Throwable) {
-        YLog.error(msg = "Failed to get large icon drawable for package $packageName", e = e)
+        MLog.e(t = e) { "Failed to get large icon drawable for package $packageName" }
         null
     }
 
@@ -209,7 +215,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
         userId: Int,
         applicationInfo: ApplicationInfo?
     ) = try {
-        val pm = appContext!!.packageManager
+        val pm = SystemUIHooker.appContext!!.packageManager
         loadAppIcon.invoke(
             appIconsManager,
             packageName,
@@ -218,7 +224,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
             pm
         )
     } catch (_: Throwable) {
-        val pm = appContext!!.packageManager
+        val pm = SystemUIHooker.appContext!!.packageManager
         getActivityIconOrApp(pm)
     } as Drawable?
 

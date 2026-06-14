@@ -1,20 +1,28 @@
 package com.gswxxn.restoresplashscreen.hook
 
-import com.gswxxn.restoresplashscreen.data.DataConst
-import com.gswxxn.restoresplashscreen.utils.CommonUtils.isAtLeastT
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.getField
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.printLog
-import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
-import com.highcapable.yukihookapi.hook.factory.current
-import com.highcapable.yukihookapi.hook.factory.method
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
+import com.gswxxn.restoresplashscreen.hook.base.HookManager
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getField
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
+import com.gswxxn.restoresplashscreen.hook.utils.toTyped
+import com.gswxxn.restoresplashscreen.hook.utils.RemotePreferences.get
+import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.toClass
+import io.github.libxposed.api.XposedModule
 
 /**
  * Android 系统相关 Hook
  */
-object AndroidHooker : YukiBaseHooker() {
-    override fun onHook() {
+object AndroidHooker {
+    /** 保存宿主（system_server）classLoader，供热重载后重新安装 Hook 使用 */
+    @Volatile
+    var classLoader: ClassLoader? = null
+        private set
 
-        val activityRecordClass = "com.android.server.wm.ActivityRecord".toClass()
+    fun init(module: XposedModule, classLoader: ClassLoader) {
+        this.classLoader = classLoader
+
+        val activityRecordClass = "com.android.server.wm.ActivityRecord".toClass(loader = classLoader)
 
         /**
          * 强制显示遮罩
@@ -23,51 +31,51 @@ object AndroidHooker : YukiBaseHooker() {
          *
          * 此处在 evaluateStartingWindowTheme() 中被调用，最终将参数传递给 showStartingWindow()
          */
-        activityRecordClass.method {
-            name = "validateStartingWindowTheme"
-            paramCount(3)
-        }.hook {
-            before {
-                val pkgName = args(1).string()
-                val isLaunchedFromSystemSurface = instance.current().method {
-                    name = "launchedFromSystemSurface"
-                    emptyParam()
-                }.boolean()
-                val isForceShowSS = prefs.get(DataConst.FORCE_SHOW_SPLASH_SCREEN)
-                        && pkgName in prefs.get(DataConst.FORCE_SHOW_SPLASH_SCREEN_LIST)
-                        && (!prefs.get(DataConst.REDUCE_SPLASH_SCREEN) || isLaunchedFromSystemSurface)
+        HookManager {
+            activityRecordClass.resolve().optional().firstMethodOrNull {
+                name = "validateStartingWindowTheme"
+                parameterCount = 3
+            }?.self
+        }.addBeforeHook({ true }) {
+            val pkgName = args(1).string()
+            val isLaunchedFromSystemSurface = instance!!.javaClass.resolve().firstMethod {
+                name = "launchedFromSystemSurface"
+                parameterCount = 0
+            }.toTyped<Boolean>().invoke(instance) ?: false
+            val isForceShowSS = Preferences.Display.FORCE_SHOW_SPLASH_SCREEN.get()
+                    && pkgName in Preferences.AppList.FORCE_SHOW_SPLASH_SCREEN_LIST.get()
+                    && (!Preferences.Display.REDUCE_SPLASH_SCREEN.get() || isLaunchedFromSystemSurface)
 
-                if (isForceShowSS) resultTrue()
-                printLog("[Android] validateStartingWindowTheme():${if (isForceShowSS) "" else " not"} force show $pkgName splash screen, isLaunchedFromSystemSurface: $isLaunchedFromSystemSurface")
-            }
-        }
+            if (isForceShowSS) resultTrue()
+            printLog("[Android] validateStartingWindowTheme():${if (isForceShowSS) "" else " not"} force show $pkgName splash screen, isLaunchedFromSystemSurface: $isLaunchedFromSystemSurface")
+        }.startHook(module)
 
         // 彻底关闭 Splash Screen
-        activityRecordClass.method {
-            name = "showStartingWindow"
-            paramCount(if (isAtLeastT) 7 else 5)
-        }.hook {
-            before {
-                val currentPkgName = instance.getField<String>("packageName")
+        HookManager {
+            activityRecordClass.resolve().optional().firstMethodOrNull {
+                name = "showStartingWindow"
+                parameterCount = 7
+            }?.self
+        }.addBeforeHook({ true }) {
+            val currentPkgName = instance!!.getField<String>("packageName")
 
-                val isDisableSS = prefs.get(DataConst.DISABLE_SPLASH_SCREEN)
-                printLog("[Android] addStartingWindow():${if (isDisableSS) "" else " not"} disable $currentPkgName splash screen")
-                if (isDisableSS) resultNull()
-            }
-        }
+            val isDisableSS = Preferences.Display.DISABLE_SPLASH_SCREEN.get()
+            printLog("[Android] addStartingWindow():${if (isDisableSS) "" else " not"} disable $currentPkgName splash screen")
+            if (isDisableSS) resultNull()
+        }.startHook(module)
 
         // 热启动时生成启动遮罩
-        activityRecordClass.method {
-            name = "getStartingWindowType"
-            paramCount(if (isAtLeastT) 7 else 6)
-        }.hook {
-            before {
-                val isHotStartCompatible = prefs.get(DataConst.ENABLE_HOT_START_COMPATIBLE)
-                        && prefs.get(DataConst.FORCE_ENABLE_SPLASH_SCREEN)
-                        && args(1).boolean()
-                if (isHotStartCompatible) result = 2
-                printLog("[Android] getStartingWindowType():${if (isHotStartCompatible) "" else " not"} set result to 2")
-            }
-        }
+        HookManager {
+            activityRecordClass.resolve().optional().firstMethodOrNull {
+                name = "getStartingWindowType"
+                parameterCount = 7
+            }?.self
+        }.addBeforeHook({ true }) {
+            val isHotStartCompatible = Preferences.Display.ENABLE_HOT_START_COMPATIBLE.get()
+                    && Preferences.Display.FORCE_ENABLE_SPLASH_SCREEN.get()
+                    && args(1).boolean()
+            if (isHotStartCompatible) result = 2
+            printLog("[Android] getStartingWindowType():${if (isHotStartCompatible) "" else " not"} set result to 2")
+        }.startHook(module)
     }
 }

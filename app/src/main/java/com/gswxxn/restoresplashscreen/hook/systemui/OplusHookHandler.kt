@@ -3,12 +3,12 @@ package com.gswxxn.restoresplashscreen.hook.systemui
 import android.graphics.drawable.Drawable
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.printLog
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 
 /**
- * 此对象用于处理针对 ColorOS 的 Hook
+ * 此对象用于处理针对 Oplus 的 Hook
  */
-object ColorOSHookHandler : BaseHookHandler() {
+object OplusHookHandler : BaseHookHandler() {
 
     /** 开始 Hook */
     override fun onHook() {

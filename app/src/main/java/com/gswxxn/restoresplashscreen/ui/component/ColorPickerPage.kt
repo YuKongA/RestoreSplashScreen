@@ -20,12 +20,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.captionBar
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -34,7 +32,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -88,14 +85,14 @@ import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.toColorInt
 import androidx.palette.graphics.Palette
 import com.gswxxn.restoresplashscreen.R
-import com.gswxxn.restoresplashscreen.data.DataConst
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toSet
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils.getBgColor
 import com.gswxxn.restoresplashscreen.utils.IconPackManager
-import com.highcapable.yukihookapi.hook.factory.prefs
+import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
 import dev.lackluster.hyperx.navigation.LocalNavigator
 import dev.lackluster.hyperx.navigation.Navigator
 import dev.lackluster.hyperx.ui.dialog.AlertDialog
@@ -110,6 +107,7 @@ import dev.lackluster.hyperx.ui.preference.ItemPosition
 import dev.lackluster.hyperx.ui.preference.PreferenceGroup
 import dev.lackluster.hyperx.ui.preference.TextPreference
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
@@ -153,7 +151,8 @@ fun ColorPickerPage(pkgName: String) {
     val dropdownDialogVisibility = remember { mutableStateOf(false) }
 
     // 已选颜色的状态, app 已保存的信息
-    val appColorConfig = AppColorConfig(pkgName, LocalContext.current)
+    val store = koinInject<RemotePreferenceStore>()
+    val appColorConfig = AppColorConfig(pkgName, LocalContext.current, store)
     val currentDarkMode = isSystemInDarkTheme().let { remember { mutableStateOf(it) } }
     val defaultColor = appColorConfig.getDefaultBGColor(currentDarkMode.value)
     val pickedColor = PickedColor(
@@ -609,31 +608,32 @@ private fun ResetText(
     currentDarkMode: MutableState<Boolean>
 ) {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val store = koinInject<RemotePreferenceStore>()
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clickable {
                 if (appColorConfig.isConfiguringOverallBGColor) {
                     val targetKey = if (currentDarkMode.value) {
-                        DataConst.OVERALL_BG_COLOR_NIGHT
+                        Preferences.Background.OVERALL_BG_COLOR_NIGHT
                     } else {
-                        DataConst.OVERALL_BG_COLOR
+                        Preferences.Background.OVERALL_BG_COLOR
                     }
-                    prefs.edit { remove(targetKey) }
+                    // 恢复默认：写回该键的默认值（等效于移除后读取默认）
+                    store.put(targetKey, targetKey.default)
                     appColorConfig.defaultColorLight = Color.White.toArgb()
                     appColorConfig.defaultColorDark = Color.Black.toArgb()
                 } else {
                     val targetKey = if (currentDarkMode.value) {
-                        DataConst.INDIVIDUAL_BG_COLOR_APP_MAP_DARK
+                        Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP_DARK
                     } else {
-                        DataConst.INDIVIDUAL_BG_COLOR_APP_MAP
+                        Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP
                     }
 
-                    val tmpConfigMap = prefs.get(targetKey).toMap()
+                    val tmpConfigMap = store.get(targetKey).toMap()
                     tmpConfigMap.remove(appColorConfig.packageName)
 
-                    prefs.edit { put(targetKey, tmpConfigMap.toSet()) }
+                    store.put(targetKey, tmpConfigMap.toSet())
                     appColorConfig.defaultColorLight = getBgColor(appColorConfig.appIcon, true)
                     appColorConfig.defaultColorDark = getBgColor(appColorConfig.appIcon, false)
                 }
@@ -692,7 +692,7 @@ private fun BottomBar(
                     .fillMaxWidth()
             ) {
                 val context = LocalContext.current
-                val prefs = context.prefs()
+                val store = koinInject<RemotePreferenceStore>()
                 TextButton(
                     modifier = Modifier.weight(1.0f),
                     text = stringResource(R.string.undo_modification),
@@ -710,41 +710,41 @@ private fun BottomBar(
 
                         if (appColorConfig.isConfiguringOverallBGColor) {
                             val targetKey = if (currentDarkMode.value)
-                                DataConst.OVERALL_BG_COLOR_NIGHT
+                                Preferences.Background.OVERALL_BG_COLOR_NIGHT
                             else
-                                DataConst.OVERALL_BG_COLOR
-                            prefs.edit { put(targetKey, colorHexString) }
+                                Preferences.Background.OVERALL_BG_COLOR
+                            store.put(targetKey, colorHexString)
                         } else {
                             val targetKey = if (currentDarkMode.value)
-                                DataConst.INDIVIDUAL_BG_COLOR_APP_MAP_DARK
+                                Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP_DARK
                             else
-                                DataConst.INDIVIDUAL_BG_COLOR_APP_MAP
-                            val tmpConfigMap = prefs.get(targetKey).toMap()
+                                Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP
+                            val tmpConfigMap = store.get(targetKey).toMap()
                             tmpConfigMap[appColorConfig.packageName] = colorHexString
-                            prefs.edit { put(targetKey, tmpConfigMap.toSet()) }
+                            store.put(targetKey, tmpConfigMap.toSet())
                         }
 
                         appColorConfig.defaultColorLight = if (appColorConfig.isConfiguringOverallBGColor) {
-                            val value = prefs.get(DataConst.OVERALL_BG_COLOR)
+                            val value = store.get(Preferences.Background.OVERALL_BG_COLOR)
                             if (value.isBlank())
                                 Color.White.toArgb()
                             else
                                 value.toColorInt()
                         } else {
-                            val value = prefs.get(DataConst.INDIVIDUAL_BG_COLOR_APP_MAP).toMap()[appColorConfig.packageName]
+                            val value = store.get(Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP).toMap()[appColorConfig.packageName]
                             if (value.isNullOrBlank())
                                 getBgColor(appColorConfig.appIcon, true)
                             else
                                 value.toColorInt()
                         }
                         appColorConfig.defaultColorDark = if (appColorConfig.isConfiguringOverallBGColor) {
-                            val value = prefs.get(DataConst.OVERALL_BG_COLOR_NIGHT)
+                            val value = store.get(Preferences.Background.OVERALL_BG_COLOR_NIGHT)
                             if (value.isBlank())
                                 Color.Black.toArgb()
                             else
                                 value.toColorInt()
                         } else {
-                            val value = prefs.get(DataConst.INDIVIDUAL_BG_COLOR_APP_MAP_DARK).toMap()[appColorConfig.packageName]
+                            val value = store.get(Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP_DARK).toMap()[appColorConfig.packageName]
                             if (value.isNullOrBlank())
                                 getBgColor(appColorConfig.appIcon, false)
                             else
@@ -809,31 +809,28 @@ private fun IntColorSeekBar(
     colors: SliderColors,
     onValueChange: ((Int) -> Unit)? = null
 ) {
-    Column {
-        BasicComponent(
-            modifier = Modifier,
-            insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 12.dp),
-            title = title,
-            endActions = {
-                Text(
-                    text = "$value / 255",
-                    fontSize = MiuixTheme.textStyles.body2.fontSize,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                    textAlign = TextAlign.End,
-                )
-            }
-        )
-        Slider(
-            modifier = Modifier.padding(16.dp, 0.dp, 16.dp, 16.dp),
-            value = value.toFloat(),
-            valueRange = 0f..255f,
-            height = 28.dp,
-            colors = colors,
-            onValueChange = { newValue: Float ->
-                onValueChange?.invoke(newValue.toInt())
-            }
-        )
-    }
+    BasicComponent(
+        title = title,
+        endActions = {
+            Text(
+                text = "$value / 255",
+                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                textAlign = TextAlign.End,
+            )
+        },
+        bottomAction = {
+            Slider(
+                value = value.toFloat(),
+                valueRange = 0f..255f,
+                height = 28.dp,
+                colors = colors,
+                onValueChange = { newValue: Float ->
+                    onValueChange?.invoke(newValue.toInt())
+                }
+            )
+        }
+    )
 }
 
 /**
@@ -845,98 +842,95 @@ private fun HueSeekBar(
     value: Float,
     onValueChange: (Float) -> Unit
 ) {
-    Column {
-        BasicComponent(
-            modifier = Modifier,
-            insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 12.dp),
-            title = title,
-            endActions = {
-                Text(
-                    text = "${value.let { it1 -> "%.2f".format(it1) }} / ${"%.2f".format(360.0f)}",
-                    fontSize = MiuixTheme.textStyles.body2.fontSize,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                    textAlign = TextAlign.End,
-                )
+    BasicComponent(
+        title = title,
+        endActions = {
+            Text(
+                text = "${value.let { it1 -> "%.2f".format(it1) }} / ${"%.2f".format(360.0f)}",
+                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                textAlign = TextAlign.End,
+            )
+        },
+        bottomAction = {
+            val hapticFeedback = LocalHapticFeedback.current
+            var dragOffset by remember { mutableFloatStateOf(0f) }
+            var currentValue by remember { mutableFloatStateOf(value) }
+            var hapticTriggered by remember { mutableStateOf(false) }
+            val updatedOnProgressChange by rememberUpdatedState(onValueChange)
+            val calculateProgress = { offset: Float, width: Int, height: Int ->
+                val newValue = ((offset - height / 2) / (width - height)).coerceIn(0.0f, 1.0f) * 360.0f
+                (round(newValue * 10f.pow(2)) / 10f.pow(2)).coerceIn(0.0f, 360.0f)
             }
-        )
-        val hapticFeedback = LocalHapticFeedback.current
-        var dragOffset by remember { mutableFloatStateOf(0f) }
-        var currentValue by remember { mutableFloatStateOf(value) }
-        var hapticTriggered by remember { mutableStateOf(false) }
-        val updatedOnProgressChange by rememberUpdatedState(onValueChange)
-        val calculateProgress = { offset: Float, width: Int, height: Int ->
-            val newValue = ((offset - height / 2) / (width - height)).coerceIn(0.0f, 1.0f) * 360.0f
-            (round(newValue * 10f.pow(2)) / 10f.pow(2)).coerceIn(0.0f, 360.0f)
-        }
 
-        Box(
-            modifier = Modifier
-                .padding(16.dp, 0.dp, 16.dp, 16.dp)
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragStart = { offset ->
-                            dragOffset = offset.x
-                            currentValue = calculateProgress(dragOffset, size.width, size.height)
-                            updatedOnProgressChange(currentValue)
-                            hapticTriggered = false
-                        },
-                        onHorizontalDrag = { _, dragAmount ->
-                            dragOffset = (dragOffset + dragAmount).coerceIn(0f, size.width.toFloat())
-                            currentValue = calculateProgress(dragOffset, size.width, size.height)
-                            updatedOnProgressChange(currentValue)
-                            if ((currentValue == 0.0f || currentValue == 360.0f) && !hapticTriggered) {
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                                hapticTriggered = true
-                            } else if (currentValue != 0.0f && currentValue != 360.0f) {
-                                hapticTriggered = false
-                            }
-                        }
-                    )
-                },
-            contentAlignment = Alignment.CenterStart
-        ) {
-            Canvas(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(28.dp)
-                    .clip(miuixShape(28.dp))
-                    .drawBehind {
-                        val barHeight = size.height
-                        val barWidth = size.width
-                        val cornerRadius = CornerRadius.Zero
-                        drawRoundRect(
-                            brush = Brush.horizontalGradient(
-                                colors = listOf(
-                                    Color.hsv(0.0f, 1.0f, 1.0f),
-                                    Color.hsv(60.0f, 1.0f, 1.0f),
-                                    Color.hsv(120.0f, 1.0f, 1.0f),
-                                    Color.hsv(180.0f, 1.0f, 1.0f),
-                                    Color.hsv(240.0f, 1.0f, 1.0f),
-                                    Color.hsv(300.0f, 1.0f, 1.0f),
-                                    Color.hsv(360.0f, 1.0f, 1.0f),
-                                ),
-                                startX = size.height,
-                                endX = size.width - size.height,
-                                tileMode = TileMode.Clamp
-                            ),
-                            size = Size(barWidth, barHeight),
-                            topLeft = Offset(0f, center.y - barHeight / 2),
-                            cornerRadius = cornerRadius
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { offset ->
+                                dragOffset = offset.x
+                                currentValue = calculateProgress(dragOffset, size.width, size.height)
+                                updatedOnProgressChange(currentValue)
+                                hapticTriggered = false
+                            },
+                            onHorizontalDrag = { _, dragAmount ->
+                                dragOffset = (dragOffset + dragAmount).coerceIn(0f, size.width.toFloat())
+                                currentValue = calculateProgress(dragOffset, size.width, size.height)
+                                updatedOnProgressChange(currentValue)
+                                if ((currentValue == 0.0f || currentValue == 360.0f) && !hapticTriggered) {
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    hapticTriggered = true
+                                } else if (currentValue != 0.0f && currentValue != 360.0f) {
+                                    hapticTriggered = false
+                                }
+                            }
                         )
-                    }
+                    },
+                contentAlignment = Alignment.CenterStart
             ) {
-                val barHeight = size.height
-                val barWidth = size.width
-                val circleX = barHeight / 2 + (value / 360.0f) * (barWidth - barHeight)
-                drawCircle(
-                    color = Color.White.copy(0.9f),
-                    radius = size.height / 2 - 6.dp.toPx(),
-                    center = Offset(circleX, barHeight / 2),
-                    style = Stroke(width = 4.dp.toPx())
-                )
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(28.dp)
+                        .clip(miuixShape(28.dp))
+                        .drawBehind {
+                            val barHeight = size.height
+                            val barWidth = size.width
+                            val cornerRadius = CornerRadius.Zero
+                            drawRoundRect(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color.hsv(0.0f, 1.0f, 1.0f),
+                                        Color.hsv(60.0f, 1.0f, 1.0f),
+                                        Color.hsv(120.0f, 1.0f, 1.0f),
+                                        Color.hsv(180.0f, 1.0f, 1.0f),
+                                        Color.hsv(240.0f, 1.0f, 1.0f),
+                                        Color.hsv(300.0f, 1.0f, 1.0f),
+                                        Color.hsv(360.0f, 1.0f, 1.0f),
+                                    ),
+                                    startX = size.height,
+                                    endX = size.width - size.height,
+                                    tileMode = TileMode.Clamp
+                                ),
+                                size = Size(barWidth, barHeight),
+                                topLeft = Offset(0f, center.y - barHeight / 2),
+                                cornerRadius = cornerRadius
+                            )
+                        }
+                ) {
+                    val barHeight = size.height
+                    val barWidth = size.width
+                    val circleX = barHeight / 2 + (value / 360.0f) * (barWidth - barHeight)
+                    drawCircle(
+                        color = Color.White.copy(0.9f),
+                        radius = size.height / 2 - 6.dp.toPx(),
+                        center = Offset(circleX, barHeight / 2),
+                        style = Stroke(width = 4.dp.toPx())
+                    )
+                }
             }
         }
-    }
+    )
 }
 
 /**
@@ -948,30 +942,27 @@ private fun FloatColorSeekBar(
     value: Float,
     onValueChange: ((Float) -> Unit)? = null
 ) {
-    Column {
-        BasicComponent(
-            modifier = Modifier,
-            insideMargin = PaddingValues(16.dp, 16.dp, 16.dp, 12.dp),
-            title = title,
-            endActions = {
-                Text(
-                    text = "${"%.2f".format(value)} / 1.0",
-                    fontSize = MiuixTheme.textStyles.body2.fontSize,
-                    color = MiuixTheme.colorScheme.onSurfaceVariantActions,
-                    textAlign = TextAlign.End,
-                )
-            }
-        )
-        Slider(
-            modifier = Modifier.padding(16.dp, 0.dp, 16.dp, 16.dp),
-            value = value,
-            valueRange = 0.0f..1.0f,
-            height = 28.dp,
-            onValueChange = { newValue: Float ->
-                onValueChange?.invoke(newValue)
-            }
-        )
-    }
+    BasicComponent(
+        title = title,
+        endActions = {
+            Text(
+                text = "${"%.2f".format(value)} / 1.0",
+                fontSize = MiuixTheme.textStyles.body2.fontSize,
+                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                textAlign = TextAlign.End,
+            )
+        },
+        bottomAction = {
+            Slider(
+                value = value,
+                valueRange = 0.0f..1.0f,
+                height = 28.dp,
+                onValueChange = { newValue: Float ->
+                    onValueChange?.invoke(newValue)
+                }
+            )
+        }
+    )
 }
 
 /**
@@ -1006,9 +997,12 @@ private fun @receiver:ColorInt Int.toHSVColorList() =
  * @property defaultColorLight 默认浅色背景颜色
  * @property defaultColorDark 默认暗色背景颜色
  */
-private class AppColorConfig(realPackageName: String?, context: Context) {
+private class AppColorConfig(
+    realPackageName: String?,
+    context: Context,
+    private val store: RemotePreferenceStore
+) {
     private val pm = context.packageManager
-    private val prefs = context.prefs()
 
     val isConfiguringOverallBGColor = realPackageName.isNullOrBlank()
 
@@ -1019,7 +1013,7 @@ private class AppColorConfig(realPackageName: String?, context: Context) {
         pm.getApplicationInfo(packageName, 0).loadLabel(pm).toString()
     }
 
-    val appIcon = (IconPackManager(context, prefs.get(DataConst.ICON_PACK_PACKAGE_NAME))
+    val appIcon = (IconPackManager(context, store.get(Preferences.Icon.ICON_PACK_PACKAGE_NAME))
         .getIconByPackageName(packageName)                      // 优先获取图标包中的图标
         ?: pm.getApplicationIcon(packageName)).toBitmap()       // 使用默认方式获取图标
     var defaultColorLight = processDefaultBGColor(false)
@@ -1041,20 +1035,20 @@ private class AppColorConfig(realPackageName: String?, context: Context) {
     private fun processDefaultBGColor(isDark: Boolean): Int {
         val colorValue = when {
             isConfiguringOverallBGColor && isDark -> {
-                prefs.get(DataConst.OVERALL_BG_COLOR_NIGHT)
+                store.get(Preferences.Background.OVERALL_BG_COLOR_NIGHT)
             }
 
             isConfiguringOverallBGColor -> {
-                prefs.get(DataConst.OVERALL_BG_COLOR)
+                store.get(Preferences.Background.OVERALL_BG_COLOR)
             }
 
             !isConfiguringOverallBGColor && isDark -> {
-                prefs.get(DataConst.INDIVIDUAL_BG_COLOR_APP_MAP_DARK)
+                store.get(Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP_DARK)
                     .toMap()[packageName].takeIf { !it.isNullOrBlank() }
             }
 
             !isConfiguringOverallBGColor -> {
-                prefs.get(DataConst.INDIVIDUAL_BG_COLOR_APP_MAP)
+                store.get(Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP)
                     .toMap()[packageName].takeIf { !it.isNullOrBlank() }
             }
 

@@ -11,7 +11,9 @@ import android.graphics.Shader
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import com.highcapable.yukihookapi.hook.factory.current
+import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
+import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
+import com.highcapable.kavaref.KavaRef.Companion.resolve
 
 /**
  * 透明背景的 AdaptiveIconDrawable
@@ -20,36 +22,36 @@ class TransparentAdaptiveIconDrawable(
     foregroundDrawable: Drawable
 ) : AdaptiveIconDrawable(ColorDrawable(Color.TRANSPARENT), foregroundDrawable) {
     private var mLayersShader: Shader?
-        get() = this.current().field {
+        get() = this.javaClass.resolve().firstField {
             name = "mLayersShader"
-            superClass()
-        }.cast<Shader>()
+            superclass()
+        }.getValueFrom(this)
         set(value) {
-            this.current().field {
+            this.javaClass.resolve().firstField {
                 name = "mLayersShader"
-                superClass()
-            }.set(value)
+                superclass()
+            }.setValueTo(this, value)
         }
-    private val mCanvas
-        get() = this.current().field {
+    private val mCanvas: Canvas
+        get() = this.javaClass.resolve().firstField {
             name = "mCanvas"
-            superClass()
-        }.cast<Canvas>()!!
-    private val mLayersBitmap
-        get() = this.current().field {
+            superclass()
+        }.getValueFrom<TransparentAdaptiveIconDrawable, Canvas>(this)!!
+    private val mLayersBitmap: Bitmap?
+        get() = this.javaClass.resolve().firstField {
             name = "mLayersBitmap"
-            superClass()
-        }.cast<Bitmap>()
-    private val mPaint
-        get() = this.current().field {
+            superclass()
+        }.getValueFrom(this)
+    private val mPaint: Paint
+        get() = this.javaClass.resolve().firstField {
             name = "mPaint"
-            superClass()
-        }.cast<Paint>()!!
-    private val mMaskScaleOnly
-        get() = this.current().field {
+            superclass()
+        }.getValueFrom<TransparentAdaptiveIconDrawable, Paint>(this)!!
+    private val mMaskScaleOnly: Path?
+        get() = this.javaClass.resolve().firstField {
             name = "mMaskScaleOnly"
-            superClass()
-        }.cast<Path>()
+            superclass()
+        }.getValueFrom(this)
 
     /**
      * 继承修改自 AdaptiveIconDrawable

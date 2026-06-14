@@ -32,16 +32,17 @@ import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
 import com.gswxxn.restoresplashscreen.BuildConfig
 import com.gswxxn.restoresplashscreen.R
-import com.gswxxn.restoresplashscreen.data.DataConst
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
-import com.highcapable.yukihookapi.hook.factory.prefs
+import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
 import dev.lackluster.hyperx.ui.component.IconSize
 import dev.lackluster.hyperx.ui.component.ImageIcon
 import dev.lackluster.hyperx.ui.layout.HyperXPage
 import dev.lackluster.hyperx.ui.preference.ItemPosition
 import dev.lackluster.hyperx.ui.preference.PreferenceGroup
+import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -90,7 +91,7 @@ fun AboutPage() {
 @Composable
 private fun HeaderBrandCard() {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val store = koinInject<RemotePreferenceStore>()
     var count = 0
     var lastClickTime: Long = 0
 
@@ -105,9 +106,9 @@ private fun HeaderBrandCard() {
             lastClickTime = now
             if (count != 5) return@clickable
             count = 0
-            if (!prefs.get(DataConst.ENABLE_DEV_SETTINGS)) {
+            if (!store.get(Preferences.Dev.ENABLE_DEV_SETTINGS)) {
                 MainActivity.devMode.value = true
-                prefs.edit { put(DataConst.ENABLE_DEV_SETTINGS, true) }
+                store.put(Preferences.Dev.ENABLE_DEV_SETTINGS, true)
                 context.toast(R.string.enable_dev_settings)
             } else {
                 context.toast(R.string.enable_dev_settings)
@@ -266,8 +267,6 @@ enum class OpenSourceReference(val author: String, val license: String, val link
     MIUINativeNotifyIcon("fankes", "AGPL-3.0", "https://github.com/fankes/MIUINativeNotifyIcon"),
     `Hide-My-Applist`("Dr-TSNG", "AGPL-3.0", "https://github.com/Dr-TSNG/Hide-My-Applist"),
     YukiHookAPI("fankes", "Apache-2.0", "https://github.com/fankes/YukiHookAPI"),
-    MiuiHomeR("YuKongA", "GPL-3.0", "https://github.com/qqlittleice/MiuiHome_R"),
-    BlockMIUI("577fkj", "LGPL-2.1", "https://github.com/Block-Network/blockmiui"),
     HyperCompose("HowieHChen", "Apache-2.0", "https://github.com/HowieHChen/hyperx-compose"),
     Miuix("miuix-kotlin-multiplatform", "Apache-2.0", "https://github.com/miuix-kotlin-multiplatform/miuix")
 }

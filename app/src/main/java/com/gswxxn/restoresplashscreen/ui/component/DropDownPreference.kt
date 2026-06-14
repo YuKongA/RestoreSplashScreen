@@ -6,15 +6,15 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.gswxxn.restoresplashscreen.R
+import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.hook.factory.prefs
-import com.highcapable.yukihookapi.hook.xposed.prefs.data.PrefsData
 import dev.lackluster.hyperx.ui.preference.DropDownEntry
+import dev.lackluster.hyperx.ui.preference.core.PreferenceKey
+import dev.lackluster.hyperx.ui.preference.core.rememberPreferenceState
 import dev.lackluster.hyperx.ui.preference.DropDownPreference as HyperXDropDownPreference
 
 /**
- * 下拉框可组合函数, 使用 YukiHookAPI 管理 SharedPreferences, 并在模块未激活时提示用户。
+ * 下拉框可组合函数, 通过 [rememberPreferenceState] 管理远程 SharedPreferences, 并在模块未激活时提示用户。
  *
  * 注意：[entries] 中每项的 [DropDownEntry.value] 即为该项的下标（与旧的 index 语义一致）。
  * 可用 `entries.mapIndexed { index, title -> DropDownEntry(value = index, title = title) }` 构造。
@@ -24,17 +24,18 @@ fun DropDownPreference(
     title: String,
     summary: String? = null,
     entries: List<DropDownEntry<Int>>,
-    prefsData: PrefsData<Int>? = null,
+    key: PreferenceKey<Int>? = null,
     selectedIndex: MutableIntState? = null,
     showValue: Boolean = true,
     onSelectedIndexChange: ((Int) -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val boundState = key?.let { rememberPreferenceState(it) }
 
     val currentSelectedIndex = selectedIndex
-        ?: prefsData?.let { remember { mutableIntStateOf(prefs.get(it).coerceIn(0, entries.size - 1)) } }
-        ?: remember { mutableIntStateOf(0) }
+        ?: remember(boundState?.value, entries.size) {
+            mutableIntStateOf((boundState?.value ?: 0).coerceIn(0, entries.size - 1))
+        }
 
     HyperXDropDownPreference(
         title = title,
@@ -43,10 +44,10 @@ fun DropDownPreference(
         entries = entries,
         showValue = showValue,
         onValueChange = { newValue ->
-            if (!YukiHookAPI.Status.isXposedModuleActive) {
+            if (!MainActivity.moduleActive.value) {
                 context.toast(R.string.make_sure_active)
             } else {
-                prefsData?.let { prefs.edit { put(it, newValue) } }
+                boundState?.value = newValue
                 currentSelectedIndex.intValue = newValue
                 onSelectedIndexChange?.invoke(newValue)
             }

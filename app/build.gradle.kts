@@ -6,7 +6,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.compose)
 }
 
@@ -41,11 +40,6 @@ android {
         targetSdk = projectProperty("project.targetSdk").toInt()
         versionCode = projectProperty("project.versionCode").toInt()
         versionName = projectProperty("project.versionName")
-    }
-
-    packaging.resources {
-        excludes += "**"
-        merges += "META-INF/yukihookapi_init"
     }
 
     dependenciesInfo {
@@ -127,11 +121,13 @@ androidComponents {
 dependencies {
     implementation(projects.hyperxCompose)
 
-    compileOnly(libs.xposed.api)
-    implementation(libs.yukihookapi.api)
-    ksp(libs.yukihookapi.ksp.xposed)
+    compileOnly(libs.libxposed.api)
+    implementation(libs.libxposed.service)
+    implementation(libs.kavaref.core)
+    implementation(libs.kavaref.android)
+    implementation(libs.kavaref.extension)
+    implementation(libs.koin.androidx.compose)
     implementation(libs.androidx.palette.ktx)
-    implementation(libs.androidx.compose.material3)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)
 }

@@ -12,14 +12,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.gswxxn.restoresplashscreen.R
-import com.gswxxn.restoresplashscreen.data.DataConst
 import com.gswxxn.restoresplashscreen.data.Route
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.ui.component.HeaderCard
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
-import com.highcapable.yukihookapi.hook.factory.prefs
+import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
 import dev.lackluster.hyperx.navigation.LocalNavigator
+import org.koin.compose.koinInject
 import dev.lackluster.hyperx.navigation.Navigator
 import dev.lackluster.hyperx.ui.layout.HyperXPage
 import dev.lackluster.hyperx.ui.preference.ItemPosition
@@ -69,13 +70,13 @@ private fun SettingItems(navigator: Navigator) {
 @Composable
 private fun ForceShowSplashScreenSettingsGroup(navigator: Navigator) {
     val context = LocalContext.current
-    val prefs = context.prefs()
-    val forceShowSplash = remember { mutableStateOf(prefs.get(DataConst.FORCE_SHOW_SPLASH_SCREEN)) }
+    val store = koinInject<RemotePreferenceStore>()
+    val forceShowSplash = remember { mutableStateOf(store.get(Preferences.Display.FORCE_SHOW_SPLASH_SCREEN)) }
     // 强制显示遮罩
     SwitchPreference(
         title = stringResource(R.string.force_show_splash_screen),
         summary = stringResource(R.string.force_show_splash_screen_tips),
-        prefsData = DataConst.FORCE_SHOW_SPLASH_SCREEN,
+        key = Preferences.Display.FORCE_SHOW_SPLASH_SCREEN,
         checked = forceShowSplash
     ) { newValue ->
         if (newValue) {
@@ -96,7 +97,7 @@ private fun ForceShowSplashScreenSettingsGroup(navigator: Navigator) {
             SwitchPreference(
                 title = stringResource(R.string.reduce_splash_screen),
                 summary = stringResource(R.string.reduce_splash_screen_tips),
-                prefsData = DataConst.REDUCE_SPLASH_SCREEN
+                key = Preferences.Display.REDUCE_SPLASH_SCREEN
             )
         }
     }
@@ -107,10 +108,10 @@ private fun ForceShowSplashScreenSettingsGroup(navigator: Navigator) {
  */
 @Composable
 private fun OtherDisplaySettingsGroup() {
-    val prefs = LocalContext.current.prefs()
+    val store = koinInject<RemotePreferenceStore>()
 
-    val forceDisableSplash = remember { mutableStateOf(prefs.get(DataConst.DISABLE_SPLASH_SCREEN)) }
-    val forceEnableSplash = remember { mutableStateOf(prefs.get(DataConst.FORCE_ENABLE_SPLASH_SCREEN)) }
+    val forceDisableSplash = remember { mutableStateOf(store.get(Preferences.Display.DISABLE_SPLASH_SCREEN)) }
+    val forceEnableSplash = remember { mutableStateOf(store.get(Preferences.Display.FORCE_ENABLE_SPLASH_SCREEN)) }
 
     // 互斥设置
     AnimatedVisibility(
@@ -123,7 +124,7 @@ private fun OtherDisplaySettingsGroup() {
             SwitchPreference(
                 title = stringResource(R.string.force_enable_splash_screen),
                 summary = stringResource(R.string.force_enable_splash_screen_tips),
-                prefsData = DataConst.FORCE_ENABLE_SPLASH_SCREEN,
+                key = Preferences.Display.FORCE_ENABLE_SPLASH_SCREEN,
                 checked = forceEnableSplash
             )
             // 将启动遮罩适用于热启动
@@ -135,7 +136,7 @@ private fun OtherDisplaySettingsGroup() {
                 SwitchPreference(
                     title = stringResource(R.string.hot_start_compatible),
                     summary = stringResource(R.string.hot_start_compatible_tips),
-                    prefsData = DataConst.ENABLE_HOT_START_COMPATIBLE,
+                    key = Preferences.Display.ENABLE_HOT_START_COMPATIBLE,
                     enabled = forceEnableSplash.value
                 )
             }
@@ -145,7 +146,7 @@ private fun OtherDisplaySettingsGroup() {
     SwitchPreference(
         title = stringResource(R.string.disable_splash_screen),
         summary = stringResource(R.string.disable_splash_screen_tips),
-        prefsData = DataConst.DISABLE_SPLASH_SCREEN,
+        key = Preferences.Display.DISABLE_SPLASH_SCREEN,
         checked = forceDisableSplash
     )
 }

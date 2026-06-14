@@ -6,30 +6,30 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.gswxxn.restoresplashscreen.R
+import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
-import com.highcapable.yukihookapi.YukiHookAPI
-import com.highcapable.yukihookapi.hook.factory.prefs
-import com.highcapable.yukihookapi.hook.xposed.prefs.data.PrefsData
 import dev.lackluster.hyperx.ui.component.ImageIcon
+import dev.lackluster.hyperx.ui.preference.core.PreferenceKey
+import dev.lackluster.hyperx.ui.preference.core.rememberPreferenceState
 import dev.lackluster.hyperx.ui.preference.SwitchPreference as HyperXSwitchPreference
 
 /**
- * 开关可组合函数, 使用 YukiHookAPI 管理 SharedPreferences, 并在模块未激活时提示用户
+ * 开关可组合函数, 通过 [rememberPreferenceState] 管理远程 SharedPreferences, 并在模块未激活时提示用户
  */
 @Composable
 fun SwitchPreference(
     icon: ImageIcon? = null,
     title: String,
     summary: String? = null,
-    prefsData: PrefsData<Boolean>? = null,
+    key: PreferenceKey<Boolean>? = null,
     enabled: Boolean = true,
     checked: MutableState<Boolean>? = null,
     onCheckedChange: ((Boolean) -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val boundState = key?.let { rememberPreferenceState(it) }
     val currentChecked = checked
-        ?: prefsData?.let { remember { mutableStateOf(prefs.get(it)) } }
+        ?: boundState
         ?: remember { mutableStateOf(false) }
 
     HyperXSwitchPreference(
@@ -39,10 +39,13 @@ fun SwitchPreference(
         checked = currentChecked.value,
         enabled = enabled,
         onCheckedChange = { newValue ->
-            if (!YukiHookAPI.Status.isXposedModuleActive) {
+            if (!MainActivity.moduleActive.value) {
                 context.toast(R.string.make_sure_active)
             } else {
-                prefsData?.let { prefs.edit { put(it, newValue) } }
+                // 持久化（boundState 与 currentChecked 为同一对象时不重复写入）
+                if (boundState != null && boundState !== currentChecked) {
+                    boundState.value = newValue
+                }
                 currentChecked.value = newValue
                 onCheckedChange?.invoke(newValue)
             }

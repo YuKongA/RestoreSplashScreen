@@ -12,14 +12,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.gswxxn.restoresplashscreen.R
-import com.gswxxn.restoresplashscreen.data.DataConst
 import com.gswxxn.restoresplashscreen.data.Route
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.ui.component.HeaderCard
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
-import com.highcapable.yukihookapi.hook.factory.prefs
+import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
 import dev.lackluster.hyperx.navigation.LocalNavigator
+import org.koin.compose.koinInject
 import dev.lackluster.hyperx.navigation.Navigator
 import dev.lackluster.hyperx.ui.layout.HyperXPage
 import dev.lackluster.hyperx.ui.preference.ItemPosition
@@ -50,14 +51,14 @@ fun ScopePage() {
 @Composable
 private fun SettingItems(navigator: Navigator) {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val store = koinInject<RemotePreferenceStore>()
 
-    val customScope = remember { mutableStateOf(prefs.get(DataConst.ENABLE_CUSTOM_SCOPE)) }
+    val customScope = remember { mutableStateOf(store.get(Preferences.Scope.ENABLE_CUSTOM_SCOPE)) }
 
     // 自定义模块作用域
     SwitchPreference(
         title = stringResource(R.string.custom_scope),
-        prefsData = DataConst.ENABLE_CUSTOM_SCOPE,
+        key = Preferences.Scope.ENABLE_CUSTOM_SCOPE,
         checked = customScope
     ) { newValue ->
         if (newValue) {
@@ -74,7 +75,7 @@ private fun SettingItems(navigator: Navigator) {
             SwitchPreference(
                 title = stringResource(R.string.replace_to_empty_splash_screen),
                 summary = stringResource(R.string.replace_to_empty_splash_screen_tips),
-                prefsData = DataConst.REPLACE_TO_EMPTY_SPLASH_SCREEN
+                key = Preferences.Icon.REPLACE_TO_EMPTY_SPLASH_SCREEN
             )
             // 配置应用列表
             TextPreference(title = stringResource(R.string.exception_mode_list)) {

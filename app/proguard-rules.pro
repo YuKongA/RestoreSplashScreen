@@ -19,11 +19,15 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
--keepclassmembers class * implements androidx.viewbinding.ViewBinding {
-    *** inflate(android.view.LayoutInflater);
-}
--keep class kotlin.Unit
 -keep class com.gswxxn.restoresplashscreen.ui.MainActivity
 
-# YukiHookAPI 1.3.x 的反射后端 KavaRef 引用了仅存在于 JDK 的类，Android 上不可用，忽略告警
--dontwarn java.lang.reflect.AnnotatedType
+# libxposed
+-dontwarn io.github.libxposed.annotation.**
+-adaptresourcefilecontents META-INF/xposed/java_init.list
+-keep,allowoptimization,allowobfuscation public class * extends io.github.libxposed.api.XposedModule {
+    public <init>();
+}
+
+# kotlinx.serialization
+-keepattributes *Annotation*, Signature
+-keepnames class org.koin.** { *; }

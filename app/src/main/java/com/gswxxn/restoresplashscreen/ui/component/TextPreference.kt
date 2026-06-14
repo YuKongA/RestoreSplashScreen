@@ -3,8 +3,8 @@ package com.gswxxn.restoresplashscreen.ui.component
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import com.gswxxn.restoresplashscreen.R
+import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
-import com.highcapable.yukihookapi.YukiHookAPI
 import dev.lackluster.hyperx.ui.component.ImageIcon
 import dev.lackluster.hyperx.ui.preference.TextPreference as HyperXTextPreference
 
@@ -27,7 +27,7 @@ fun TextPreference(
         summary = summary,
         value = value,
         onClick = {
-            if (!YukiHookAPI.Status.isXposedModuleActive && !ignoreModuleActiveStatus) {
+            if (!MainActivity.moduleActive.value && !ignoreModuleActiveStatus) {
                 context.toast(R.string.make_sure_active)
             } else {
                 onClick?.invoke()

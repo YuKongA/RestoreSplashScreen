@@ -15,12 +15,17 @@ import android.view.ViewOutlineProvider
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.core.graphics.drawable.toDrawable
-import com.gswxxn.restoresplashscreen.data.DataConst
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentApplicationInfo
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentComponentName
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getDevPrefs
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
+import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
+import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
+import com.gswxxn.restoresplashscreen.hook.utils.toTyped
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
 import com.gswxxn.restoresplashscreen.ui.page.data.ShrinkIconType
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.dp2px
@@ -28,13 +33,10 @@ import com.gswxxn.restoresplashscreen.utils.CommonUtils.isDarkMode
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils
 import com.gswxxn.restoresplashscreen.utils.IconPackManager
 import com.gswxxn.restoresplashscreen.utils.MIUIIconsHelper
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.atLeastMIUI14
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.getDevPrefs
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.printLog
 import com.gswxxn.restoresplashscreen.wrapper.TransparentAdaptiveIconDrawable
-import com.highcapable.yukihookapi.hook.factory.current
-import com.highcapable.yukihookapi.hook.factory.field
-import com.highcapable.yukihookapi.hook.factory.toClass
+import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.toClass
+import com.highcapable.kavaref.extension.classOf
 
 /**
  * 此对象用于处理图标 Hook
@@ -55,8 +57,8 @@ object IconHookHandler : BaseHookHandler() {
      */
     private var currentUseBigMIUILagerIcon: Boolean? = null
     private var currentIconDrawable: Drawable? = null
-    private val iconPackManager by lazy { IconPackManager(appContext!!, prefs.get(DataConst.ICON_PACK_PACKAGE_NAME)) }
-    private val miuiIcons by lazy { MIUIIconsHelper(appContext!!, appClassLoader!!) }
+    private val iconPackManager by lazy { IconPackManager(appContext!!, prefs.get(Preferences.Icon.ICON_PACK_PACKAGE_NAME)) }
+    private val miuiIcons by lazy { MIUIIconsHelper(appContext!!, appClassLoader) }
 
     /**
      * 重置当前应用的属性
@@ -73,13 +75,14 @@ object IconHookHandler : BaseHookHandler() {
         SystemUIHooker.Members.getWindowAttrs.addAfterHook {
 
             //忽略应用主动设置的图标
-            val isDefaultStyle = prefs.get(DataConst.ENABLE_DEFAULT_STYLE) &&
-                    if (prefs.get(DataConst.IS_DEFAULT_STYLE_LIST_EXCEPTION_MODE))
-                        currentPackageName !in prefs.get(DataConst.DEFAULT_STYLE_LIST)
+            val isDefaultStyle = prefs.get(Preferences.Icon.ENABLE_DEFAULT_STYLE) &&
+                    if (prefs.get(Preferences.Scope.IS_DEFAULT_STYLE_LIST_EXCEPTION_MODE))
+                        currentPackageName !in prefs.get(Preferences.AppList.DEFAULT_STYLE_LIST)
                     else
-                        currentPackageName in prefs.get(DataConst.DEFAULT_STYLE_LIST)
+                        currentPackageName in prefs.get(Preferences.AppList.DEFAULT_STYLE_LIST)
             if (isDefaultStyle) {
-                args[1]!!.current().field { name = "mSplashScreenIcon" }.set(null)
+                val attrs = args[1]!!
+                attrs.javaClass.resolve().firstField { name = "mSplashScreenIcon" }.setValueTo(attrs, null)
             }
             printLog("getWindowAttrs():${if (isDefaultStyle) "" else " not"} ignore set icon")
         }
@@ -93,19 +96,21 @@ object IconHookHandler : BaseHookHandler() {
         // 执行缩小图标
         SystemUIHooker.Members.createIconDrawable.addBeforeHook {
             if (currentUseBigMIUILagerIcon == true) {
-                val mFinalIconSize = instance.current().field { name = "mFinalIconSize" }
-                mFinalIconSize.set((mFinalIconSize.int() * 1.35).toInt())
+                val mFinalIconSizeField = instance!!.javaClass.resolve().firstField { name = "mFinalIconSize" }
+                val size = mFinalIconSizeField.getValueFrom<Any, Int>(instance) ?: 0
+                mFinalIconSizeField.setValueTo(instance, (size * 1.35).toInt())
                 printLog("createIconDrawable(): execute enlarge icon")
             } else if (currentIsNeedShrinkIcon) {
-                val mFinalIconSize = instance.current().field { name = "mFinalIconSize" }
-                mFinalIconSize.set((mFinalIconSize.int() / 1.5).toInt())
+                val mFinalIconSizeField = instance!!.javaClass.resolve().firstField { name = "mFinalIconSize" }
+                val size = mFinalIconSizeField.getValueFrom<Any, Int>(instance) ?: 0
+                mFinalIconSizeField.setValueTo(instance, (size / 1.5).toInt())
                 printLog("createIconDrawable(): execute shrink icon")
             }
         }
 
         // 创建模糊背景 View
         SystemUIHooker.Members.build_SplashScreenViewBuilder.addAfterHook {
-            if (prefs.get(DataConst.SHRINK_ICON) == ShrinkIconType.NotShrinkIcon.ordinal || !prefs.get(DataConst.ENABLE_ADD_ICON_BLUR_BG)) {
+            if (prefs.get(Preferences.Icon.SHRINK_ICON) == ShrinkIconType.NotShrinkIcon.ordinal || !prefs.get(Preferences.Icon.ENABLE_ADD_ICON_BLUR_BG)) {
                 printLog("build_SplashScreenViewBuilder(): not enable add icon blur bg")
                 return@addAfterHook
             } else if (!currentIsNeedShrinkIcon || currentUseBigMIUILagerIcon == true) {
@@ -113,12 +118,13 @@ object IconHookHandler : BaseHookHandler() {
                 return@addAfterHook
             }
 
-            val splashScreenView = result<FrameLayout>()!!
-            val iconView = splashScreenView.current().field { name = "mIconView" }.cast<ImageView>()
+            val splashScreenView = result as FrameLayout
+            val iconView = splashScreenView.javaClass.resolve().firstField { name = "mIconView" }.toTyped<ImageView>().get(splashScreenView)
                 ?: return@addAfterHook
 
             val iconSize = (appResources!!.getDimensionPixelSize(
-                $$"com.android.internal.R$dimen".toClass().field { name = "starting_surface_icon_size" }.get().int()
+                "com.android.internal.R\$dimen".toClass(loader = appClassLoader).resolve()
+                    .firstField { name = "starting_surface_icon_size" }.getValueFrom<Any, Int>(null)!!
             ) / 1.5).toInt()
             val bgIconSize = iconSize * 4
 
@@ -127,7 +133,7 @@ object IconHookHandler : BaseHookHandler() {
                 currentIconDrawable,
                 iconSize,
                 iconSize * 4,
-                iconSize * getDevPrefs(DataConst.DEV_ICON_ROUND_CORNER_RATE) / 100f
+                iconSize * getDevPrefs(Preferences.Dev.DEV_ICON_ROUND_CORNER_RATE) / 100f
             ) ?: return@addAfterHook
 
             val iconBlurBGView = ImageView(appContext).apply {
@@ -152,14 +158,14 @@ object IconHookHandler : BaseHookHandler() {
 
         // 绘制圆角
         SystemUIHooker.Members.build_SplashScreenViewBuilder.addAfterHook {
-            val splashScreenView = result<FrameLayout>()!!
-            val iconView = splashScreenView.current().field { name = "mIconView" }.cast<ImageView>()
+            val splashScreenView = result as FrameLayout
+            val iconView = splashScreenView.javaClass.resolve().firstField { name = "mIconView" }.toTyped<ImageView>().get(splashScreenView)
                 ?: return@addAfterHook
-            val iconSize = instance.current().field { name = "mIconSize" }.int()
-            val iconDrawable = instance.current().field { name = "mIconDrawable" }.cast<Drawable>()
+            val iconSize = instance!!.javaClass.resolve().firstField { name = "mIconSize" }.getValueFrom<Any, Int>(instance) ?: 0
+            val iconDrawable = instance!!.javaClass.resolve().firstField { name = "mIconDrawable" }.getValueFrom<Any, Drawable>(instance)
                 ?: return@addAfterHook
-            val isNeedDrawRoundCorner = prefs.get(DataConst.ENABLE_DRAW_ROUND_CORNER) && // 用户配置
-                    $$"android.window.SplashScreenView$IconAnimateListener".toClass() !in iconDrawable.javaClass.interfaces && // 不为动态图标绘制圆角
+            val isNeedDrawRoundCorner = prefs.get(Preferences.Display.ENABLE_DRAW_ROUND_CORNER) && // 用户配置
+                    "android.window.SplashScreenView\$IconAnimateListener".toClass(loader = appClassLoader) !in iconDrawable.javaClass.interfaces && // 不为动态图标绘制圆角
                     iconSize != 0 && // 如果没有图标 则不绘制圆角
                     currentUseBigMIUILagerIcon == true // 如果当前使用 MIUI 大图标, 则不绘制圆角
 
@@ -173,7 +179,7 @@ object IconHookHandler : BaseHookHandler() {
                     val border = dp2px(appContext!!, 1.5f)
                     outline.setRoundRect(
                         border, border, view.width - border, view.height - border,
-                        iconSize.toFloat() * getDevPrefs(DataConst.DEV_ICON_ROUND_CORNER_RATE) / 100
+                        iconSize.toFloat() * getDevPrefs(Preferences.Dev.DEV_ICON_ROUND_CORNER_RATE) / 100
                     )
                 }
             }
@@ -187,21 +193,27 @@ object IconHookHandler : BaseHookHandler() {
                 printLog("normalizeAndWrapToAdaptiveIcon(): avoid shrink icon by system ui")
                 val boolShrinkNonAdaptiveIconsIndex = args.indexOfFirst { it is Boolean }
                 if (boolShrinkNonAdaptiveIconsIndex != -1) {
-                    args(boolShrinkNonAdaptiveIconsIndex).setFalse()
+                    args(boolShrinkNonAdaptiveIconsIndex).set(false)
                 } else {
-                    val scale = instance.current(ignored = true)
-                        .method { name = "getNormalizer"; superClass() }.call()?.current()
-                        ?.method { name = "getScale"; paramCount(4); superClass() }
-                        ?.invoke<Float>(
-                            args.first { it is Drawable },
-                            args.first { it is RectF },
-                            null,
-                            null
-                        ) ?: 0.92f
-                    args(args.indexOfFirst { it is FloatArray }).cast<FloatArray>()!![0] = scale
+                    val normalizer = instance!!.javaClass.resolve().optional().firstMethodOrNull {
+                        name = "getNormalizer"
+                        superclass()
+                    }?.toTyped<Any>()?.invoke(instance)
+                    val scale = normalizer?.javaClass?.resolve()?.optional()?.firstMethodOrNull {
+                        name = "getScale"
+                        parameterCount = 4
+                        superclass()
+                    }?.toTyped<Float>()?.invoke(
+                        normalizer,
+                        args.first { it is Drawable },
+                        args.first { it is RectF },
+                        null,
+                        null
+                    ) ?: 0.92f
+                    (args(args.indexOfFirst { it is FloatArray }).any() as FloatArray)[0] = scale
                     val oriDrawable = args.first { it is Drawable } as Drawable
                     val returnType = SystemUIHooker.Members.normalizeAndWrapToAdaptiveIcon.returnType
-                    result = if (returnType == AdaptiveIconDrawable::class.java)
+                    result = if (returnType == classOf<AdaptiveIconDrawable>())
                         TransparentAdaptiveIconDrawable(oriDrawable)
                     else
                         oriDrawable
@@ -209,7 +221,7 @@ object IconHookHandler : BaseHookHandler() {
             }
         }
         SystemUIHooker.Members.createIconBitmap_BaseIconFactory.addBeforeHook {
-            args(0).cast<Drawable>()?.let { drawable ->
+            (args(0).any() as? Drawable)?.let { drawable ->
                 printLog("createIconBitmap_BaseIconFactory(): avoid shrink icon by system ui")
                 result = GraphicUtils.drawable2Bitmap(drawable, getIconSize(drawable))
             }
@@ -217,7 +229,7 @@ object IconHookHandler : BaseHookHandler() {
 
         // 强制使图标背景被判断为复杂, 以防止安卓抹去简单的图标背景
         SystemUIHooker.Members.iconColor_constructor.addAfterHook {
-            instance.current().field { name = "mIsBgComplex" }.set(true)
+            instance!!.javaClass.resolve().firstField { name = "mIsBgComplex" }.setValueTo(instance, true)
         }
     }
 
@@ -234,15 +246,15 @@ object IconHookHandler : BaseHookHandler() {
      * @return 处理后的 Drawable 对象
      */
     fun processIconDrawable(oriDrawable: Drawable): Drawable {
-        val shrinkIconType = prefs.get(DataConst.SHRINK_ICON)
-        val colorMode = prefs.get(DataConst.BG_COLOR_MODE)
+        val shrinkIconType = prefs.get(Preferences.Icon.SHRINK_ICON)
+        val colorMode = prefs.get(Preferences.Background.BG_COLOR_MODE)
         val isDarkMode = isDarkMode(appContext!!)
 
-        val isHideSplashScreenIcon = prefs.get(DataConst.ENABLE_HIDE_SPLASH_SCREEN_ICON) &&
-                if (prefs.get(DataConst.IS_HIDE_SPLASH_SCREEN_ICON_EXCEPTION_MODE))
-                    currentPackageName !in prefs.get(DataConst.HIDE_SPLASH_SCREEN_ICON_LIST)
+        val isHideSplashScreenIcon = prefs.get(Preferences.Icon.ENABLE_HIDE_SPLASH_SCREEN_ICON) &&
+                if (prefs.get(Preferences.Scope.IS_HIDE_SPLASH_SCREEN_ICON_EXCEPTION_MODE))
+                    currentPackageName !in prefs.get(Preferences.AppList.HIDE_SPLASH_SCREEN_ICON_LIST)
                 else
-                    currentPackageName in prefs.get(DataConst.HIDE_SPLASH_SCREEN_ICON_LIST)
+                    currentPackageName in prefs.get(Preferences.AppList.HIDE_SPLASH_SCREEN_ICON_LIST)
 
         val iconSize = getIconSize(oriDrawable)
 
@@ -289,7 +301,8 @@ object IconHookHandler : BaseHookHandler() {
      */
     private fun getIconSize(drawable: Drawable): Int {
         val mIconSize = appResources!!.getDimensionPixelSize(
-            $$"com.android.internal.R$dimen".toClass().field { name = "starting_surface_icon_size" }.get().int()
+            "com.android.internal.R\$dimen".toClass(loader = appClassLoader).resolve()
+                .firstField { name = "starting_surface_icon_size" }.getValueFrom<Any, Int>(null)!!
         )
 
         return if (drawable is AdaptiveIconDrawable) (mIconSize * 1.2 + 0.5).toInt()
@@ -298,7 +311,7 @@ object IconHookHandler : BaseHookHandler() {
 
     /** 使用 MIUI 大图标 */
     private fun getMIUILargeIcon(): Drawable? {
-        if (atLeastMIUI14 && prefs.get(DataConst.ENABLE_USE_MIUI_LARGE_ICON) && miuiIcons.hasLargeIcon(currentPackageName)) {
+        if (prefs.get(Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON) && miuiIcons.hasLargeIcon(currentPackageName)) {
             printLog("getIcon(): use MIUI Large Icon")
             return miuiIcons.getLargeIconDrawable(currentPackageName)?.let {
                 val largeIconSize = miuiIcons.getLargeIconSize(currentPackageName)
@@ -319,7 +332,7 @@ object IconHookHandler : BaseHookHandler() {
 
     /** 使用图标包 */
     private fun getIconFromIconPack(): Drawable? {
-        if (prefs.get(DataConst.ICON_PACK_PACKAGE_NAME) != "None") {
+        if (prefs.get(Preferences.Icon.ICON_PACK_PACKAGE_NAME) != "None") {
             printLog("getIcon(): use Icon Pack")
             return when {
                 currentPackageName == "com.android.contacts" && currentComponentName.isNotEmpty() ->
@@ -341,7 +354,7 @@ object IconHookHandler : BaseHookHandler() {
      * 使用 Context.packageManager.getApplicationIcon() 的方式获取图标
      */
     private fun replaceWayOfGetIcons(): Drawable? {
-        if (prefs.get(DataConst.ENABLE_REPLACE_ICON)) {
+        if (prefs.get(Preferences.Icon.ENABLE_REPLACE_ICON)) {
             printLog("getIcon(): replace way of getting icon")
             val pm = appContext!!.packageManager
             return when {

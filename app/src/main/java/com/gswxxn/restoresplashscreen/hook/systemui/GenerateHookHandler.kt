@@ -2,16 +2,22 @@ package com.gswxxn.restoresplashscreen.hook.systemui
 
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
-import com.gswxxn.restoresplashscreen.data.DataConst
 import com.gswxxn.restoresplashscreen.data.StartingWindowInfo
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.getMapPrefs
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.printLog
-import com.highcapable.yukihookapi.hook.factory.current
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getMapPrefs
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
+import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
+import com.gswxxn.restoresplashscreen.utils.MLog
+import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.toClass
+import io.github.libxposed.api.XposedInterface
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.lang.reflect.Method
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * 此对象用于处理 基础设置 和 实验功能 中的 Hook
@@ -49,10 +55,14 @@ object GenerateHookHandler : BaseHookHandler() {
             if (args[1]!! is ActivityInfo)
                 activityInfo = args[1] as ActivityInfo
             else {
-                activityInfo = args[1]!!.current().field { name = "targetActivityInfo" }.cast<ActivityInfo>()
+                val arg = args[1]!!
+                activityInfo = arg.javaClass.resolve().firstField { name = "targetActivityInfo" }.getValueFrom<Any, ActivityInfo>(arg)
                 if (activityInfo == null) {
-                    activityInfo = args[1]!!.current().field { name = "taskInfo" }.any()!!.current()
-                        .field { superClass(); name = "topActivityInfo" }.cast<ActivityInfo>()!!
+                    val taskInfo = arg.javaClass.resolve().firstField { name = "taskInfo" }.getValueFrom<Any, Any>(arg)!!
+                    activityInfo = taskInfo.javaClass.resolve().firstField {
+                        name = "topActivityInfo"
+                        superclass()
+                    }.getValueFrom<Any, ActivityInfo>(taskInfo)!!
                 }
             }
 
@@ -72,7 +82,7 @@ object GenerateHookHandler : BaseHookHandler() {
              *
              * 直接干预 build() 中的 if 判断
              */
-            val forceEnableSplashScreen = prefs.get(DataConst.FORCE_ENABLE_SPLASH_SCREEN)
+            val forceEnableSplashScreen = prefs.get(Preferences.Display.FORCE_ENABLE_SPLASH_SCREEN)
             if (forceEnableSplashScreen) {
                 if (!exceptCurrentApp) {
                     args(args.indexOfFirst { it is Int }).set(StartingWindowInfo.STARTING_WINDOW_TYPE_SPLASH_SCREEN)
@@ -90,18 +100,15 @@ object GenerateHookHandler : BaseHookHandler() {
                 }
 
                 // 单独配置应用最小持续时长
-                in prefs.get(DataConst.MIN_DURATION_LIST) -> {
-                    val configMap = getMapPrefs(DataConst.MIN_DURATION_CONFIG_MAP)
+                in prefs.get(Preferences.AppList.MIN_DURATION_LIST) -> {
+                    val configMap = getMapPrefs(Preferences.AppList.MIN_DURATION_CONFIG_MAP)
                     try {
                         val duration = configMap[currentPackageName].toString().toLong()
 
                         if (duration == 0L) callOriginal()
                         else {
                             printLog("removeStartingWindow(): remove splash screen of $currentPackageName after $duration ms")
-                            MainScope().launch {
-                                delay(duration)
-                                callOriginal()
-                            }
+                            delayCallOriginal(duration, instance, args)
                         }
 
                     } catch (_: NumberFormatException) {
@@ -111,14 +118,11 @@ object GenerateHookHandler : BaseHookHandler() {
                 }
 
                 // 默认值
-                else -> prefs.get(DataConst.MIN_DURATION).let { duration ->
+                else -> prefs.get(Preferences.Display.MIN_DURATION).let { duration ->
                     if (duration == 0) callOriginal()
                     else {
                         printLog("removeStartingWindow(): remove splash screen of $currentPackageName after $duration ms (default value)")
-                        MainScope().launch {
-                            delay(duration.toLong())
-                            callOriginal()
-                        }
+                        delayCallOriginal(duration.toLong(), instance, args)
                     }
                 }
             }
@@ -130,17 +134,52 @@ object GenerateHookHandler : BaseHookHandler() {
     }
 
     /**
-     * 判断是否应执行Hook操作。
+     * 延迟 [duration] 毫秒后调用 `removeStartingWindow` 的原方法
      *
-     * @return 是否应执行Hook操作。
+     */
+    private fun delayCallOriginal(duration: Long, instance: Any?, args: Array<Any?>) {
+        val method = resolveRemoveStartingWindowMethod()
+        val argsCopy = args.copyOf()
+        MainScope().launch {
+            delay(duration.milliseconds)
+            try {
+                if (method != null) {
+                    val invoker: XposedInterface.Invoker<*, Method> = module.getInvoker(method)
+                    invoker.setType(XposedInterface.Invoker.Type.Origin())
+                    invoker.invoke(instance, *argsCopy)
+                } else {
+                    MLog.w { "delayCallOriginal(): removeStartingWindow Method 解析失败，无法延迟调用原方法" }
+                }
+            } catch (e: Throwable) {
+                MLog.e(e)
+            }
+        }
+    }
+
+    /**
+     * 解析 `ShellTaskOrganizer#removeStartingWindow` 的原始 [Method]
+     */
+    private fun resolveRemoveStartingWindowMethod(): Method? = try {
+        "com.android.wm.shell.ShellTaskOrganizer".toClass(appClassLoader, false)
+            .resolve()
+            .firstMethodOrNull { name = "removeStartingWindow" }
+            ?.self
+    } catch (_: Throwable) {
+        null
+    }
+
+    /**
+     * 判断是否应执行Hook操作
+     *
+     * @return 是否应执行Hook操作
      */
     private fun isExcept(): Boolean {
         return if (currentPackageName.isBlank())
             true
         else {
-            val list = prefs.get(DataConst.CUSTOM_SCOPE_LIST)
-            val isExceptionMode = prefs.get(DataConst.IS_CUSTOM_SCOPE_EXCEPTION_MODE)
-            (prefs.get(DataConst.ENABLE_CUSTOM_SCOPE)
+            val list = prefs.get(Preferences.AppList.CUSTOM_SCOPE_LIST)
+            val isExceptionMode = prefs.get(Preferences.Scope.IS_CUSTOM_SCOPE_EXCEPTION_MODE)
+            (prefs.get(Preferences.Scope.ENABLE_CUSTOM_SCOPE)
                     && ((isExceptionMode && (currentPackageName in list))
                     || (!isExceptionMode && currentPackageName !in list)))
         }

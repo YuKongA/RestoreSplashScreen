@@ -1,155 +1,217 @@
 package com.gswxxn.restoresplashscreen.hook
 
+import android.content.Context
+import android.content.pm.ActivityInfo
+import android.content.pm.ComponentInfo
 import androidx.annotation.Keep
 import com.gswxxn.restoresplashscreen.hook.base.HookManager
 import com.gswxxn.restoresplashscreen.hook.systemui.BgHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.BottomHookHandler
-import com.gswxxn.restoresplashscreen.hook.systemui.ColorOSHookHandler
+import com.gswxxn.restoresplashscreen.hook.systemui.OplusHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.IconHookHandler
-import com.gswxxn.restoresplashscreen.hook.systemui.MIUIHookHandler
+import com.gswxxn.restoresplashscreen.hook.systemui.XiaomiHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.ScopeHookHandler
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.isColorOS
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.isMIUI
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.loadHookHandler
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.registerHookInfo
-import com.highcapable.yukihookapi.hook.entity.YukiBaseHooker
-import com.highcapable.yukihookapi.hook.factory.constructor
-import com.highcapable.yukihookapi.hook.factory.method
-import com.highcapable.yukihookapi.hook.log.YLog
-import com.highcapable.yukihookapi.hook.type.android.ActivityInfoClass
-import com.highcapable.yukihookapi.hook.type.android.ComponentInfoClass
-import com.highcapable.yukihookapi.hook.type.android.DrawableClass
-import com.highcapable.yukihookapi.hook.type.java.FloatType
-import com.highcapable.yukihookapi.hook.type.java.IntType
-import com.highcapable.yukihookapi.hook.type.java.StringClass
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isColorOS
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.loadHookHandler
+import com.gswxxn.restoresplashscreen.utils.MLog
+import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.highcapable.kavaref.extension.classOf
+import com.highcapable.kavaref.extension.makeAccessible
+import com.highcapable.kavaref.extension.toClass
+import com.highcapable.kavaref.extension.toClassOrNull
+import io.github.libxposed.api.XposedModule
 
-object SystemUIHooker : YukiBaseHooker() {
+/**
+ * SystemUI 进程内的 Hook 入口
+ */
+object SystemUIHooker {
+
+    lateinit var module: XposedModule
+        private set
+
+    lateinit var classLoader: ClassLoader
+        private set
+
+    /** 宿主（SystemUI）Application 的 Context */
+    @Volatile
+    var appContext: Context? = null
+        private set
+
+    /** 当前用户 ID */
+    val appUserId: Int = android.os.Process.myUid() / 100000
+
     @Keep
     object Members {
         val makeSplashScreenContentView = HookManager {
-            "com.android.wm.shell.startingsurface.SplashscreenContentDrawer".toClass()
-                .method { name = "makeSplashScreenContentView" }.give()!!
+            "com.android.wm.shell.startingsurface.SplashscreenContentDrawer".toClassOrNull(loader = classLoader)
+                ?.resolve()?.optional()?.firstMethodOrNull { name = "makeSplashScreenContentView" }?.self
         }
         val getWindowAttrs = HookManager {
-            "com.android.wm.shell.startingsurface.SplashscreenContentDrawer".toClass()
-                .method {
+            "com.android.wm.shell.startingsurface.SplashscreenContentDrawer".toClassOrNull(loader = classLoader)
+                ?.resolve()?.optional()?.firstMethodOrNull {
                     name = "getWindowAttrs"
-                    paramCount(2)
-                }.give()!!
+                    parameterCount = 2
+                }?.self
         }
         val getBGColorFromCache = HookManager {
-            "com.android.wm.shell.startingsurface.SplashscreenContentDrawer".toClass().method {
-                name = "getBGColorFromCache"
-                paramCount(2)
-            }.give()!!
+            "com.android.wm.shell.startingsurface.SplashscreenContentDrawer".toClassOrNull(loader = classLoader)
+                ?.resolve()?.optional()?.firstMethodOrNull {
+                    name = "getBGColorFromCache"
+                    parameterCount = 2
+                }?.self
         }
         val startingWindowViewBuilderConstructor = HookManager {
-            ("com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$StartingWindowViewBuilder".toClassOrNull()
-                ?: "com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$SplashViewBuilder".toClass()) // Android 14
-                .constructor { paramCount(2..3) }.give()!!
+            ("com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$StartingWindowViewBuilder".toClassOrNull(loader = classLoader)
+                ?: "com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$SplashViewBuilder".toClassOrNull(loader = classLoader)) // Android 14
+                ?.resolve()?.optional()?.firstConstructorOrNull { parameterCount { it in 2..3 } }?.self
         }
         val createIconDrawable = HookManager {
-            ("com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$StartingWindowViewBuilder".toClassOrNull()
-                ?: "com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$SplashViewBuilder".toClass()) // Android 14
-                .method { name = "createIconDrawable" }.give()!!
+            ("com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$StartingWindowViewBuilder".toClassOrNull(loader = classLoader)
+                ?: "com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$SplashViewBuilder".toClassOrNull(loader = classLoader)) // Android 14
+                ?.resolve()?.optional()?.firstMethodOrNull { name = "createIconDrawable" }?.self
         }
         val iconColor_constructor = HookManager {
-            "com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$ColorCache\$IconColor".toClass()
-                .constructor().give()!!
+            "com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$ColorCache\$IconColor".toClassOrNull(loader = classLoader)
+                ?.resolve()?.optional()?.firstConstructorOrNull()?.self
         }
         val getIcon_IconProvider = HookManager(!isColorOS) {
-            "com.android.launcher3.icons.IconProvider".toClass().method {
+            "com.android.launcher3.icons.IconProvider".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "getIcon"
-                paramCount(2)
-                param { IntType in it && (ActivityInfoClass in it || ComponentInfoClass in it) }
-            }.give()!!
+                parameterCount = 2
+                parameters { types ->
+                    Integer.TYPE in types &&
+                            (classOf<ActivityInfo>() in types || classOf<ComponentInfo>() in types)
+                }
+            }?.self
         }
         val normalizeAndWrapToAdaptiveIcon = HookManager {
-            "com.android.launcher3.icons.BaseIconFactory".toClass().method {
+            "com.android.launcher3.icons.BaseIconFactory".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "normalizeAndWrapToAdaptiveIcon"
-            }.give()!!
+            }?.self
         }
         val createIconBitmap_BaseIconFactory = HookManager {
-            "com.android.launcher3.icons.BaseIconFactory".toClass().method {
+            "com.android.launcher3.icons.BaseIconFactory".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "createIconBitmap"
-                param(DrawableClass, FloatType, IntType)
-            }.give()!!
+                parameters(android.graphics.drawable.Drawable::class, Float::class, Int::class)
+            }?.self
         }
         val build_SplashScreenViewBuilder = HookManager {
-            "android.window.SplashScreenView\$Builder".toClass().method {
+            "android.window.SplashScreenView\$Builder".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "build"
-            }.give()!!
+            }?.self
         }
         val removeStartingWindow = HookManager {
-            "com.android.wm.shell.ShellTaskOrganizer".toClass().method {
+            "com.android.wm.shell.ShellTaskOrganizer".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "removeStartingWindow"
-            }.give()!!
+            }?.self
         }
 
-        // MIUI
+        // Xiaomi
         val isMiuiHome_TaskSnapshotHelperImpl = HookManager(
-            isMIUI && "android.app.TaskSnapshotHelperImpl".hasClass()
+            isMIUI && "android.app.TaskSnapshotHelperImpl".toClassOrNull(loader = classLoader) != null
         ) {
-            "android.app.TaskSnapshotHelperImpl".toClass().method {
+            "android.app.TaskSnapshotHelperImpl".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "isMiuiHome"
-                param(StringClass)
-            }.give()!!
+                parameters(String::class)
+            }?.self
         }
         val updateForceDarkSplashScreen_ForceDarkHelperStubImpl = HookManager(isMIUI) {
-            "android.window.SplashScreenView\$Builder".toClass().method {
+            $$"android.window.SplashScreenView$Builder".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "isStaringWindowUnderNightMode"
-                emptyParam()
-            }.ignored().give() ?: "android.view.ForceDarkHelperStubImpl".toClass().method {
-                name = "updateForceDarkSplashScreen"
-            }.give()!!
+                emptyParameters()
+            }?.self ?: "android.view.ForceDarkHelperStubImpl".toClassOrNull(loader = classLoader)?.resolve()?.optional()
+                ?.firstMethodOrNull {
+                    name = "updateForceDarkSplashScreen"
+                }?.self
         }
 
-        // ColorOS
+        // Oplus
         val setContentViewBackground_OplusShellStartingWindowManager = HookManager(isColorOS) {
-            "com.android.wm.shell.startingsurface.OplusShellStartingWindowManager".toClass().method {
+            "com.android.wm.shell.startingsurface.OplusShellStartingWindowManager".toClassOrNull(loader = classLoader)?.resolve()
+                ?.optional()?.firstMethodOrNull {
                 name = "setContentViewBackground"
-            }.give()!!
+            }?.self
         }
         val getIconExt_OplusShellStartingWindowManager = HookManager(isColorOS) {
-            "com.android.wm.shell.startingsurface.OplusShellStartingWindowManager".toClass().method {
+            "com.android.wm.shell.startingsurface.OplusShellStartingWindowManager".toClassOrNull(loader = classLoader)?.resolve()
+                ?.optional()?.firstMethodOrNull {
                 name = "getIconExt"
-                paramCount(4..6)
-            }.give()!!
+                parameterCount { it in 4..6 }
+            }?.self
         }
         val getWindowAttrsIfPresent_OplusShellStartingWindowManager = HookManager(isColorOS) {
-            "com.android.wm.shell.startingsurface.OplusShellStartingWindowManager".toClass().method {
+            "com.android.wm.shell.startingsurface.OplusShellStartingWindowManager".toClassOrNull(loader = classLoader)?.resolve()
+                ?.optional()?.firstMethodOrNull {
                 name = "getWindowAttrsIfPresent"
-            }.give()!!
+            }?.self
         }
     }
 
-    /** 开始 Hook */
-    override fun onHook() {
-        // 注册 DataChannel
-        registerHookInfo(Members)
+    /** 是否已经完成首次 Hook（attachBaseContext 可能被多次调用，仅首次执行） */
+    @Volatile
+    private var isHooked = false
 
+    /**
+     * 由外部在 SystemUI 进程加载时调用：注入 [module]/[classLoader]，
+     * Hook `Application#attachBaseContext` 以捕获宿主 Context 并触发实际 Hook。
+     */
+    fun init(module: XposedModule, classLoader: ClassLoader) {
+        this.module = module
+        this.classLoader = classLoader
+
+        HookManager {
+            "android.app.Application".toClass(loader = classLoader).resolve().optional().firstMethodOrNull {
+                name = "attachBaseContext"
+                parameters(Context::class)
+                superclass()
+            }?.self
+        }.addAfterHook({ true }) {
+            if (isHooked) return@addAfterHook
+            appContext = args(0).any() as? Context
+            isHooked = true
+            onHook()
+        }.startHook(module)
+    }
+
+    /**
+     * 热重载后由新一代代码调用：复用上一代捕获的宿主 [classLoader] 与 [appContext]，直接重新安装功能 Hook。
+     *
+     * 热重载不会重放 `attachBaseContext`（宿主 Application 早已创建），因此不能走 [init] 的捕获流程，
+     * 需在 classLoader/Context 就绪后直接执行 [onHook]。[Members] 在新一代为全新单例，
+     * 首次访问时会基于此处设置的 [classLoader] 解析宿主成员。
+     */
+    fun reHook(module: XposedModule, classLoader: ClassLoader, appContext: Context?) {
+        this.module = module
+        this.classLoader = classLoader
+        this.appContext = appContext
+        isHooked = true
+        onHook()
+    }
+
+    /** 开始 Hook */
+    private fun onHook() {
         loadHookHandler(
             GenerateHookHandler,
             ScopeHookHandler,
             IconHookHandler,
             BottomHookHandler,
             BgHookHandler,
-            MIUIHookHandler,
-            ColorOSHookHandler
+            XiaomiHookHandler,
+            OplusHookHandler
         )
 
         // 执行 Hook
         Members.javaClass.declaredFields.forEach { field ->
-            field.isAccessible = true
+            field.makeAccessible()
             val hookManager = field.get(null)
 
             if (hookManager is HookManager) try {
-                hookManager.startHook()
+                hookManager.startHook(module)
             } catch (e: Throwable) {
-                YLog.error(e = e)
+                MLog.e(e)
             }
         }
     }
-
 }

@@ -11,26 +11,26 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.gswxxn.restoresplashscreen.R
-import com.gswxxn.restoresplashscreen.data.DataConst
 import com.gswxxn.restoresplashscreen.data.Route
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.ui.component.DropDownPreference
 import com.gswxxn.restoresplashscreen.ui.component.HeaderCard
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
 import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.isMIUI
-import com.highcapable.yukihookapi.hook.factory.hasClass
-import com.highcapable.yukihookapi.hook.factory.prefs
+import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isMIUI
 import dev.lackluster.hyperx.navigation.LocalNavigator
+import org.koin.compose.koinInject
 import dev.lackluster.hyperx.navigation.Navigator
 import dev.lackluster.hyperx.ui.layout.HyperXPage
 import dev.lackluster.hyperx.ui.preference.DropDownEntry
 import dev.lackluster.hyperx.ui.preference.ItemPosition
 import dev.lackluster.hyperx.ui.preference.PreferenceGroup
+import com.highcapable.kavaref.extension.toClassOrNull
 
 /**
  * 背景 界面
@@ -54,8 +54,8 @@ fun BackgroundPage() {
  */
 @Composable
 private fun SettingItems(navigator: Navigator) {
-    val prefs = LocalContext.current.prefs()
-    val ignoreDarkMode = remember { mutableStateOf(prefs.get(DataConst.IGNORE_DARK_MODE)) }
+    val store = koinInject<RemotePreferenceStore>()
+    val ignoreDarkMode = remember { mutableStateOf(store.get(Preferences.Background.IGNORE_DARK_MODE)) }
 
     PreferenceGroup(position = if (isMIUI) ItemPosition.Middle else ItemPosition.Last) {
         GeneralSettingItems(navigator = navigator, ignoreDarkMode = ignoreDarkMode)
@@ -76,10 +76,10 @@ private fun GeneralSettingItems(
     navigator: Navigator,
     ignoreDarkMode: MutableState<Boolean>
 ) {
-    val prefs = LocalContext.current.prefs()
+    val store = koinInject<RemotePreferenceStore>()
 
-    val colorMode = remember { mutableIntStateOf(prefs.get(DataConst.BG_COLOR_MODE)) }
-    val changeBGColorType = remember { mutableIntStateOf(prefs.get(DataConst.CHANG_BG_COLOR_TYPE)) }
+    val colorMode = remember { mutableIntStateOf(store.get(Preferences.Background.BG_COLOR_MODE)) }
+    val changeBGColorType = remember { mutableIntStateOf(store.get(Preferences.Background.CHANG_BG_COLOR_TYPE)) }
 
     val shouldShowColorMode = changeBGColorType.intValue == ChangeBGColorTypes.FromIcon.ordinal ||
             changeBGColorType.intValue == ChangeBGColorTypes.FromMonet.ordinal
@@ -88,7 +88,7 @@ private fun GeneralSettingItems(
     DropDownPreference(
         title = stringResource(R.string.change_bg_color),
         entries = ChangeBGColorTypes.entries.mapIndexed { index, type -> DropDownEntry(value = index, title = stringResource(type.stringID)) },
-        prefsData = DataConst.CHANG_BG_COLOR_TYPE,
+        key = Preferences.Background.CHANG_BG_COLOR_TYPE,
         onSelectedIndexChange = { changeBGColorType.intValue = it }
     )
 
@@ -102,11 +102,11 @@ private fun GeneralSettingItems(
             title = stringResource(R.string.color_mode),
             summary = if (isMIUI) stringResource(R.string.color_mode_tips) else null,
             entries = BGColorModes.entries.mapIndexed { index, mode -> DropDownEntry(value = index, title = stringResource(mode.stringID)) },
-            prefsData = DataConst.BG_COLOR_MODE,
+            key = Preferences.Background.BG_COLOR_MODE,
             selectedIndex = colorMode
         ) {
             if (isMIUI && colorMode.intValue == BGColorModes.FollowSystem.ordinal) {
-                prefs.edit { put(DataConst.IGNORE_DARK_MODE, true) }
+                store.put(Preferences.Background.IGNORE_DARK_MODE, true)
                 ignoreDarkMode.value = true
             }
         }
@@ -132,7 +132,7 @@ private fun GeneralSettingItems(
             // 跳过已主动设置背景颜色的应用
             SwitchPreference(
                 title = stringResource(R.string.skip_app_with_bg_color),
-                prefsData = DataConst.SKIP_APP_WITH_BG_COLOR
+                key = Preferences.Background.SKIP_APP_WITH_BG_COLOR
             )
             // 配置应用列表
             TextPreference(title = stringResource(R.string.change_bg_color_list)) {
@@ -155,16 +155,16 @@ private fun MIUISettingsGroup(ignoreDarkMode: MutableState<Boolean>) {
     SwitchPreference(
         title = stringResource(R.string.ignore_dark_mode),
         summary = stringResource(R.string.ignore_dark_mode_tips),
-        prefsData = DataConst.IGNORE_DARK_MODE,
+        key = Preferences.Background.IGNORE_DARK_MODE,
         checked = ignoreDarkMode
     )
 
-    if ("android.app.TaskSnapshotHelperImpl".hasClass()) {
+    if ("android.app.TaskSnapshotHelperImpl".toClassOrNull() != null) {
         // 移除截图背景
         SwitchPreference(
             title = stringResource(R.string.remove_bg_drawable),
             summary = stringResource(R.string.remove_bg_drawable_tips),
-            prefsData = DataConst.REMOVE_BG_DRAWABLE
+            key = Preferences.Background.REMOVE_BG_DRAWABLE
         )
     }
 }

@@ -84,7 +84,8 @@
                     android:valueTo="0.5"
                     android:valueType="floatType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -95,7 +96,8 @@
                     android:valueTo="0.5"
                     android:valueType="floatType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -106,7 +108,8 @@
                     android:valueTo="1"
                     android:valueType="floatType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -117,7 +120,8 @@
                     android:valueTo="1"
                     android:valueType="floatType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -128,7 +132,8 @@
                     android:valueTo="0.9"
                     android:valueType="floatType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -139,7 +144,8 @@
                     android:valueTo="0.9"
                     android:valueType="floatType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
             </set>
@@ -156,7 +162,8 @@
                     android:valueTo="M522.4 -174 C442.87,-174 378.4,-109.53 378.4,-30 C378.4,49.53 442.87,114 522.4,114 C601.93,114 666.4,49.53 666.4,-30 C666.4,-109.53 601.93,-174 522.4,-174c "
                     android:valueType="pathType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -167,7 +174,8 @@
                     android:valueTo="M522.5 -262 C394.09,-262 290,-158.13 290,-30 C290,98.13 394.09,202 522.5,202 C650.91,202 755,98.13 755,-30 C755,-158.13 650.91,-262 522.5,-262c "
                     android:valueType="pathType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -178,7 +186,8 @@
                     android:valueTo="M430.5 -226 C271.44,-226 142.5,-97.06 142.5,62 C142.5,221.06 271.44,350 430.5,350 C589.56,350 718.5,221.06 718.5,62 C718.5,-97.06 589.56,-226 430.5,-226c "
                     android:valueType="pathType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -189,7 +198,8 @@
                     android:valueTo="M337.75 -120 C186.01,-120 63,3.01 63,154.75 C63,306.49 186.01,429.5 337.75,429.5 C489.49,429.5 612.5,306.49 612.5,154.75 C612.5,3.01 489.49,-120 337.75,-120c "
                     android:valueType="pathType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -200,7 +210,8 @@
                     android:valueTo="M337.5 -104 C194.46,-104 78.5,11.96 78.5,155 C78.5,298.04 194.46,414 337.5,414 C480.54,414 596.5,298.04 596.5,155 C596.5,11.96 480.54,-104 337.5,-104c "
                     android:valueType="pathType">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
             </set>
@@ -217,7 +228,8 @@
                     android:propertyYName="translateY"
                     android:pathData="M 80,355C 80,355 80,355 80,355">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
                 <objectAnimator
@@ -228,7 +240,8 @@
                     android:propertyYName="translateY"
                     android:pathData="M 80,355C 95.333,339.667 156.667,278.333 172,263">
                     <aapt:attr name="android:interpolator">
-                        <pathInterpolator android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
+                        <pathInterpolator
+                            android:pathData="M 0.0,0.0 c0.167,0.167 0.833,0.833 1.0,1.0" />
                     </aapt:attr>
                 </objectAnimator>
             </set>

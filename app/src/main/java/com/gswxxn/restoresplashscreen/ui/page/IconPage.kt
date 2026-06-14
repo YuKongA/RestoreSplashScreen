@@ -16,8 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.gswxxn.restoresplashscreen.R
-import com.gswxxn.restoresplashscreen.data.DataConst
 import com.gswxxn.restoresplashscreen.data.Route
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.ui.component.DropDownPreference
 import com.gswxxn.restoresplashscreen.ui.component.HeaderCard
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
@@ -25,9 +25,10 @@ import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.ui.page.data.ShrinkIconType
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.gswxxn.restoresplashscreen.utils.IconPackManager
-import com.gswxxn.restoresplashscreen.utils.YukiHelper
-import com.highcapable.yukihookapi.hook.factory.prefs
+import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils
 import dev.lackluster.hyperx.navigation.LocalNavigator
+import org.koin.compose.koinInject
 import dev.lackluster.hyperx.navigation.Navigator
 import dev.lackluster.hyperx.ui.layout.HyperXPage
 import dev.lackluster.hyperx.ui.preference.DropDownEntry
@@ -73,7 +74,7 @@ private fun SettingItems(navigator: Navigator) {
 @Composable
 private fun CommonSettingsGroup() {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val store = koinInject<RemotePreferenceStore>()
 
     // 图标包列表预处理
     val selectedIconPackIndex = remember { mutableIntStateOf(0) }
@@ -91,9 +92,9 @@ private fun CommonSettingsGroup() {
                 }
         )
         selectedIconPackIndex.intValue = availableIconPackItems.indexOfFirst {
-            it.summary == prefs.get(DataConst.ICON_PACK_PACKAGE_NAME)
+            it.summary == store.get(Preferences.Icon.ICON_PACK_PACKAGE_NAME)
         }.takeIf { it != -1 } ?: run {
-            prefs.edit { put(DataConst.ICON_PACK_PACKAGE_NAME, "None") }
+            store.put(Preferences.Icon.ICON_PACK_PACKAGE_NAME, "None")
             context.toast(R.string.icon_pack_is_removed)
             0
         }
@@ -101,14 +102,14 @@ private fun CommonSettingsGroup() {
     // 绘制图标圆角
     SwitchPreference(
         title = stringResource(R.string.draw_round_corner),
-        prefsData = DataConst.ENABLE_DRAW_ROUND_CORNER
+        key = Preferences.Display.ENABLE_DRAW_ROUND_CORNER
     )
     // 缩小图标
-    var shrinkIcon by remember { mutableIntStateOf(prefs.get(DataConst.SHRINK_ICON)) }
+    var shrinkIcon by remember { mutableIntStateOf(store.get(Preferences.Icon.SHRINK_ICON)) }
     DropDownPreference(
         title = stringResource(R.string.shrink_icon),
         entries = ShrinkIconType.entries.mapIndexed { index, type -> DropDownEntry(value = index, title = stringResource(type.stringID)) },
-        prefsData = DataConst.SHRINK_ICON,
+        key = Preferences.Icon.SHRINK_ICON,
         onSelectedIndexChange = { shrinkIcon = it }
     )
     AnimatedVisibility(
@@ -119,21 +120,21 @@ private fun CommonSettingsGroup() {
         // 为缩小的图标添加模糊背景
         SwitchPreference(
             title = stringResource(R.string.add_icon_blur_bg),
-            prefsData = DataConst.ENABLE_ADD_ICON_BLUR_BG
+            key = Preferences.Icon.ENABLE_ADD_ICON_BLUR_BG
         )
     }
     // 替换图标获取方式
     SwitchPreference(
         title = stringResource(R.string.replace_icon),
         summary = stringResource(R.string.replace_icon_tips),
-        prefsData = DataConst.ENABLE_REPLACE_ICON
+        key = Preferences.Icon.ENABLE_REPLACE_ICON
     )
 
     // 使用 MIUI 大图标
-    if (YukiHelper.atLeastMIUI14) {
+    if (DeviceUtils.isMIUI) {
         SwitchPreference(
             title = stringResource(R.string.use_miui_large_icon),
-            prefsData = DataConst.ENABLE_USE_MIUI_LARGE_ICON
+            key = Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON
         )
     }
 
@@ -143,9 +144,10 @@ private fun CommonSettingsGroup() {
         entries = availableIconPackItems,
         selectedIndex = selectedIconPackIndex
     ) {
-        prefs.edit {
-            put(DataConst.ICON_PACK_PACKAGE_NAME, availableIconPackItems[it].summary ?: "None")
-        }
+        store.put(
+            Preferences.Icon.ICON_PACK_PACKAGE_NAME,
+            availableIconPackItems[it].summary ?: "None"
+        )
     }
 }
 
@@ -155,14 +157,14 @@ private fun CommonSettingsGroup() {
 @Composable
 private fun DefaultIconSettingsGroup(navigator: Navigator) {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val store = koinInject<RemotePreferenceStore>()
 
     // 忽略应用主动设置的图标
-    val ignoreAppIcon = remember { mutableStateOf(prefs.get(DataConst.ENABLE_DEFAULT_STYLE)) }
+    val ignoreAppIcon = remember { mutableStateOf(store.get(Preferences.Icon.ENABLE_DEFAULT_STYLE)) }
     SwitchPreference(
         title = stringResource(R.string.default_style),
         summary = stringResource(R.string.default_style_tips),
-        prefsData = DataConst.ENABLE_DEFAULT_STYLE,
+        key = Preferences.Icon.ENABLE_DEFAULT_STYLE,
         checked = ignoreAppIcon
     ) { newValue ->
         if (newValue) {
@@ -187,13 +189,13 @@ private fun DefaultIconSettingsGroup(navigator: Navigator) {
 @Composable
 private fun HideSplashIconSettingsGroup(navigator: Navigator) {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val store = koinInject<RemotePreferenceStore>()
 
-    val hideSplashIcon = remember { mutableStateOf(prefs.get(DataConst.ENABLE_HIDE_SPLASH_SCREEN_ICON)) }
+    val hideSplashIcon = remember { mutableStateOf(store.get(Preferences.Icon.ENABLE_HIDE_SPLASH_SCREEN_ICON)) }
     // 不显示图标
     SwitchPreference(
         title = stringResource(R.string.hide_splash_screen_icon),
-        prefsData = DataConst.ENABLE_HIDE_SPLASH_SCREEN_ICON,
+        key = Preferences.Icon.ENABLE_HIDE_SPLASH_SCREEN_ICON,
         checked = hideSplashIcon
     ) { newValue ->
         if (newValue) {

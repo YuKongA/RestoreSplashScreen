@@ -1,0 +1,71 @@
+package com.gswxxn.restoresplashscreen.hook.utils
+
+import com.highcapable.kavaref.extension.makeAccessible
+import com.highcapable.kavaref.resolver.ConstructorResolver
+import com.highcapable.kavaref.resolver.FieldResolver
+import com.highcapable.kavaref.resolver.MethodResolver
+import java.lang.reflect.Constructor
+import java.lang.reflect.Field
+import java.lang.reflect.Method
+
+/**
+ * KavaRef 的类型化访问辅助
+ */
+internal class TypedField<T : Any, V>(private val rawField: Field) {
+    init {
+        rawField.makeAccessible()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun get(instance: T?): V? = try {
+        rawField.get(instance) as? V
+    } catch (_: Throwable) {
+        null
+    }
+
+    fun set(instance: T?, value: V?) {
+        try {
+            rawField.set(instance, value)
+        } catch (_: Throwable) {
+        }
+    }
+}
+
+internal class TypedMethod<T : Any, R>(private val rawMethod: Method) {
+    init {
+        rawMethod.makeAccessible()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun invoke(instance: T?, vararg args: Any?): R? = try {
+        rawMethod.invoke(instance, *args) as? R
+    } catch (_: Throwable) {
+        null
+    }
+}
+
+internal class TypedConstructor<T : Any>(private val rawConstructor: Constructor<*>) {
+    init {
+        rawConstructor.makeAccessible()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun newInstance(vararg args: Any?): T? = try {
+        rawConstructor.newInstance(*args) as? T
+    } catch (_: Throwable) {
+        null
+    }
+}
+
+internal inline fun <reified V> Field.toTyped(): TypedField<Any, V> = TypedField(this)
+internal inline fun <reified R> Method.toTyped(): TypedMethod<Any, R> = TypedMethod(this)
+internal inline fun <reified V> FieldResolver<*>.toTyped(): TypedField<Any, V> = TypedField(this.self)
+internal inline fun <reified R> MethodResolver<*>.toTyped(): TypedMethod<Any, R> = TypedMethod(this.self)
+internal fun <T : Any> ConstructorResolver<T>.toTyped(): TypedConstructor<T> = TypedConstructor(this.self)
+
+internal inline fun <T : Any, reified V> FieldResolver<T>.getValueFrom(instance: T?): V? =
+    this.copy().of(instance).get() as? V
+
+internal fun <T : Any> FieldResolver<T>.setValueTo(instance: T?, value: Any?) {
+    this.copy().of(instance).set(value)
+}

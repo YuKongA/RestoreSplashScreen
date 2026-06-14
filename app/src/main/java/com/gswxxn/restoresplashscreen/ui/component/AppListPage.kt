@@ -55,9 +55,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.notEqualsTo
-import com.highcapable.yukihookapi.hook.factory.prefs
-import com.highcapable.yukihookapi.hook.xposed.prefs.data.PrefsData
+import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
 import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.ui.preference.core.PreferenceKey
+import org.koin.compose.koinInject
 import dev.lackluster.hyperx.ui.component.IconSize
 import dev.lackluster.hyperx.ui.component.ImageIcon
 import dev.lackluster.hyperx.ui.dialog.AlertDialog
@@ -102,11 +103,11 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 @Composable
 fun AppListPage(
     title: String,
-    checkedListKey: PrefsData<MutableSet<String>>,
+    checkedListKey: PreferenceKey<Set<String>>,
     extraContent: (LazyListScope.() -> Unit)? = null
 ) {
     val context = LocalContext.current
-    val prefs = context.prefs()
+    val store = koinInject<RemotePreferenceStore>()
 
     val navigator = LocalNavigator.current
     val uiConfig = LocalHyperXLayoutConfig.current
@@ -140,7 +141,7 @@ fun AppListPage(
     // 保存前的配置
     val tmpCheckedList = mutableSetOf<String>().apply {
         clear()
-        addAll(prefs.get(checkedListKey))
+        addAll(store.get(checkedListKey))
     }
 
     val coroutineScope = rememberCoroutineScope()
@@ -383,10 +384,10 @@ fun AppListPage(
                             val currentCheckedList = appInfoList.filter { it.isChecked.value }.map {
                                 it.packageName
                             }.toMutableSet()
-                            prefs.edit { put(checkedListKey, currentCheckedList) }
+                            store.put(checkedListKey, currentCheckedList)
                             tmpCheckedList.apply {
                                 clear()
-                                addAll(prefs.get(checkedListKey))
+                                addAll(store.get(checkedListKey))
                             }
                             coroutineScope.launch {
                                 context.let {
@@ -434,7 +435,7 @@ fun AppListPage(
             item {
                 PreferenceGroup {
                     BasicComponent(
-                        insideMargin = PaddingValues(start = 16.dp, top = 16.dp, bottom = 16.dp),
+                        insideMargin = PaddingValues(all = 16.dp),
                         summary = stringResource(R.string.save_hint),
                         summaryColor = BasicComponentDefaults.titleColor(),
                         startAction = {
@@ -511,6 +512,7 @@ fun AppListPage(
 fun SpliceCard(
     topCornerRadius: Dp,
     bottomCornerRadius: Dp,
+    skipTopPadding: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val shape = remember(topCornerRadius, bottomCornerRadius) {
@@ -529,7 +531,7 @@ fun SpliceCard(
             .padding(
                 start = 12.dp,
                 end = 12.dp,
-                top = if (topCornerRadius != 0.dp) 6.dp else 0.dp,
+                top = if (topCornerRadius != 0.dp && !skipTopPadding) 6.dp else 0.dp,
                 bottom = if (bottomCornerRadius != 0.dp) 6.dp else 0.dp
             ),
         shape = shape,

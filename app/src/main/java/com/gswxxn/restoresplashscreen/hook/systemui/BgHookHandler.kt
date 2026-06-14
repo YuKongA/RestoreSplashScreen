@@ -1,23 +1,22 @@
 package com.gswxxn.restoresplashscreen.hook.systemui
 
+import android.content.Context
 import android.graphics.drawable.Drawable
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.toColorInt
-import com.gswxxn.restoresplashscreen.data.DataConst
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getMapPrefs
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
+import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
 import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.isDarkMode
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.getMapPrefs
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.isMIUI
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.printLog
 import com.gswxxn.restoresplashscreen.wrapper.SplashScreenViewBuilderWrapper
-import com.highcapable.yukihookapi.hook.factory.current
+import com.highcapable.kavaref.KavaRef.Companion.resolve
 
 /**
  * 此对象用于处理 背景 Hook
@@ -35,10 +34,10 @@ object BgHookHandler : BaseHookHandler() {
     /** 开始 Hook */
     override fun onHook() {
         SystemUIHooker.Members.getBGColorFromCache.addAfterHook {
-            mTmpAttrsInstance = instance.current().field { name = "mTmpAttrs" }.any()
+            mTmpAttrsInstance = instance!!.javaClass.resolve().firstField { name = "mTmpAttrs" }.getValueFrom<Any, Any>(instance)
         }
         SystemUIHooker.Members.build_SplashScreenViewBuilder.addBeforeHook {
-            val builder = SplashScreenViewBuilderWrapper.getInstance(instance)
+            val builder = SplashScreenViewBuilderWrapper.getInstance(instance!!)
 
             // 设置背景颜色
             getColor()?.let { builder.setBackgroundColor(it) }
@@ -52,18 +51,19 @@ object BgHookHandler : BaseHookHandler() {
      */
     private fun getColor(): Int? {
         val isDarkMode = isDarkMode(appContext!!)
-        val bgColorMode = prefs.get(DataConst.BG_COLOR_MODE)
-        val bgColorType = prefs.get(DataConst.CHANG_BG_COLOR_TYPE)
-        val isInBGExceptList = currentPackageName in prefs.get(DataConst.BG_EXCEPT_LIST)
-        val ignoreDarkMode = prefs.get(DataConst.IGNORE_DARK_MODE) || !isMIUI
+        val bgColorMode = prefs.get(Preferences.Background.BG_COLOR_MODE)
+        val bgColorType = prefs.get(Preferences.Background.CHANG_BG_COLOR_TYPE)
+        val isInBGExceptList = currentPackageName in prefs.get(Preferences.AppList.BG_EXCEPT_LIST)
+        val ignoreDarkMode = prefs.get(Preferences.Background.IGNORE_DARK_MODE) || !isMIUI
         val individualBgColorAppMap = getMapPrefs(
-            if (!isDarkMode) DataConst.INDIVIDUAL_BG_COLOR_APP_MAP
-            else DataConst.INDIVIDUAL_BG_COLOR_APP_MAP_DARK
+            if (!isDarkMode) Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP
+            else Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP_DARK
         )
         val skipAppWithBgColor = bgColorType != 0 &&
                 currentPackageName !in individualBgColorAppMap.keys &&
-                prefs.get(DataConst.SKIP_APP_WITH_BG_COLOR) &&
-                mTmpAttrsInstance!!.current().field { name = "mWindowBgColor" }.int() != 0
+                prefs.get(Preferences.Background.SKIP_APP_WITH_BG_COLOR) &&
+                (mTmpAttrsInstance!!.javaClass.resolve().firstField { name = "mWindowBgColor" }.getValueFrom<Any, Int>(mTmpAttrsInstance)
+                    ?: 0) != 0
 
         if (skipAppWithBgColor) {
             printLog("SplashScreenViewBuilder(): skip set bg color cuz app has been set bg color")
@@ -78,35 +78,37 @@ object BgHookHandler : BaseHookHandler() {
                 // 从图标取色
                 ChangeBGColorTypes.FromIcon.ordinal -> {
                     printLog("SplashScreenViewBuilder(): get adaptive background color")
-                    IconHookHandler.currentIconDominantColor ?: mTmpAttrsInstance!!.current().field { name = "mSplashScreenIcon" }
-                        .cast<Drawable>()?.let { drawable ->
-                        val bitmap = GraphicUtils.drawable2Bitmap(drawable, 100)
-                        GraphicUtils.getBgColor(
-                            bitmap,
-                            when (bgColorMode) {
-                                BGColorModes.DarkColor.ordinal -> false
-                                BGColorModes.FollowSystem.ordinal -> !isDarkMode
-                                else -> true
-                            }
-                        )
-                    }
+                    IconHookHandler.currentIconDominantColor ?: mTmpAttrsInstance!!.javaClass.resolve()
+                        .firstField { name = "mSplashScreenIcon" }
+                        .getValueFrom<Any, Drawable>(mTmpAttrsInstance)?.let { drawable ->
+                            val bitmap = GraphicUtils.drawable2Bitmap(drawable, 100)
+                            GraphicUtils.getBgColor(
+                                bitmap,
+                                when (bgColorMode) {
+                                    BGColorModes.DarkColor.ordinal -> false
+                                    BGColorModes.FollowSystem.ordinal -> !isDarkMode
+                                    else -> true
+                                }
+                            )
+                        }
                 }
                 // 从壁纸取色
                 ChangeBGColorTypes.FromMonet.ordinal -> {
                     printLog("SplashScreenViewBuilder(): get monet background color")
                     when (bgColorMode) {
-                        BGColorModes.LightColor.ordinal -> dynamicLightColorScheme(appContext!!).primaryContainer.toArgb()
-                        BGColorModes.DarkColor.ordinal -> dynamicDarkColorScheme(appContext!!).surface.toArgb()
+                        BGColorModes.LightColor.ordinal -> monetLightPrimaryContainer(appContext!!)
+                        BGColorModes.DarkColor.ordinal -> monetDarkSurface(appContext!!)
                         else -> if (!isDarkMode)
-                            dynamicLightColorScheme(appContext!!).primaryContainer.toArgb()
+                            monetLightPrimaryContainer(appContext!!)
                         else
-                            dynamicDarkColorScheme(appContext!!).surface.toArgb()
+                            monetDarkSurface(appContext!!)
                     }
                 }
                 // 自定义颜色
                 ChangeBGColorTypes.FromCustom.ordinal -> {
                     printLog("SplashScreenViewBuilder(): set overall background color")
-                    prefs.get(if (isDarkMode) DataConst.OVERALL_BG_COLOR_NIGHT else DataConst.OVERALL_BG_COLOR).toColorInt()
+                    prefs.get(if (isDarkMode) Preferences.Background.OVERALL_BG_COLOR_NIGHT else Preferences.Background.OVERALL_BG_COLOR)
+                        .toColorInt()
                 }
 
                 else -> {
@@ -116,4 +118,12 @@ object BgHookHandler : BaseHookHandler() {
             printLog("SplashScreenViewBuilder(): skip set bg color cuz app in except list"); null
         }
     }
+
+    /** 系统 Monet 浅色 primaryContainer */
+    private fun monetLightPrimaryContainer(ctx: Context): Int =
+        ctx.resources.getColor(android.R.color.system_primary_container_light, ctx.theme)
+
+    /** 系统 Monet 深色 surface */
+    private fun monetDarkSurface(ctx: Context): Int =
+        ctx.resources.getColor(android.R.color.system_surface_dark, ctx.theme)
 }

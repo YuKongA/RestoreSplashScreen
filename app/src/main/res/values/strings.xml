@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">启动遮罩进化</string>
+    <string name="xposed_desc">自定义 Splash Screen, 使用现代 libxposed</string>
 
     <!--主页-->
     <string name="module_version">模块版本：%s</string>
     <string name="module_is_active">模块已激活</string>
     <string name="module_is_not_active">模块未激活</string>
-    <string name="module_is_updated_restart_phone_needed">模块已更新, 需要重启手机</string>
+    <string name="module_is_updated_restart_phone_needed">模块已更新，需重载或重启</string>
     <string name="no_root">请授予 Root 权限</string>
 
     <string name="xposed_framework_version">Activated by %s API %d</string>
@@ -14,9 +15,13 @@
 
     <string name="restart">重启</string>
     <string name="restart_title">重启提示</string>
-    <string name="restart_message">模块更新后需要重启系统界面才能生效。\n\n如果您 LSPosed 框架中的作用域包含系统框架，则需要重启手机</string>
+    <string name="restart_message">作用域未勾选「系统框架」时无需重启手机。</string>
     <string name="reboot">重启手机</string>
     <string name="restart_system_ui">重启系统界面</string>
+    <string name="hot_reload">执行热重载</string>
+    <string name="hot_reload_unsupported">当前框架版本不支持热重载，需「LSPosed API 102+」</string>
+    <string name="hot_reload_none">没有需要更新的进程</string>
+    <string name="hot_reload_result">热重载完成：%1$d / %2$d 个进程成功</string>
     <string name="button_cancel">取消</string>
     <string name="button_abandonment">舍弃修改</string>
     <string name="button_reedit">返回编辑</string>
@@ -42,7 +47,7 @@
     <string name="hide_icon">隐藏桌面图标</string>
     <string name="blur">模糊效果</string>
     <string name="split_view">自适应布局</string>
-    <string name="split_view_tips">在大屏幕设备上或横屏时，应用程序将自动切换到双面板布局</string>
+    <string name="split_view_tips">在大屏幕设备上或横屏时，应用程序将自动切换到双面板布局。</string>
     <string name="min_duration">遮罩最小持续时长</string>
     <string name="min_duration_tips">注意：设置此参数会拖慢应用启动时间。如无特殊需求，则不应配置此项。</string>
     <string name="backup_restore_title">备份与恢复</string>
@@ -70,12 +75,12 @@
     <string name="shrink_all_icon">缩小全部图标</string>
     <string name="replace_icon">替换图标获取方式</string>
     <string name="add_icon_blur_bg">为缩小的图标添加模糊背景</string>
-    <string name="replace_icon_tips">开启此选项后，Splash Screen的图标可以跟随主题设定。但是通常获取到的主题图标分辨率较低，经过放大后图标可能会比较模糊。</string>
-    <string name="use_miui_large_icon">使用 MIUI 大图标</string>
+    <string name="replace_icon_tips">开启此选项后，Splash Screen 的图标可以跟随主题设定。但是通常获取到的主题图标分辨率较低，经过放大后图标可能会比较模糊。</string>
+    <string name="use_miui_large_icon">使用小米大图标</string>
     <string name="use_icon_pack">使用图标包</string>
     <string name="icon_pack_is_removed">图标包被删除, 请重新选择</string>
     <string name="default_style">忽略应用主动设置的图标</string>
-    <string name="default_style_tips">开启此选项并后，选中的应用即使主动适配Splash Screen, 也按未设置图标处理。开启此选项也可以解决以下问题：\n1. 使用第三方主题会出现图标方角问题。\n2. 部分应用没有将图标背景设置成透明导致图标方角问题。</string>
+    <string name="default_style_tips">开启此选项并后，选中的应用即使主动适配 Splash Screen, 也按未设置图标处理。开启此选项也可以解决以下问题：\n1、使用第三方主题会出现图标方角问题。\n2、部分应用没有将图标背景设置成透明导致图标方角问题。</string>
     <string name="hide_splash_screen_icon">不显示图标</string>
     <string name="default_style_list">配置应用列表</string>
     <string name="remove_branding_image">移除底部图片</string>
@@ -87,7 +92,7 @@
     <string name="from_monet">莫奈取色</string>
     <string name="from_custom">自定义颜色</string>
     <string name="color_mode">颜色模式</string>
-    <string name="color_mode_tips">选择 &quot;跟随系统&quot; 模式后需要同时开启下方的 &quot;忽略 MIUI 深色模式&quot; 选项, 以便取色功能可以在深色模式下正常工作。其他两项按需开启 &quot;忽略 MIUI 深色模式&quot;</string>
+    <string name="color_mode_tips">选择「跟随系统」模式后需要同时开启下方的「忽略小米深色模式」选项, 以便取色功能可以在深色模式下正常工作。其他两项按需开启「忽略小米深色模式」</string>
     <string name="light_color">浅色</string>
     <string name="dark_color">暗色</string>
     <string name="follow_system">跟随系统</string>
@@ -95,21 +100,21 @@
     <string name="skip_app_with_bg_color">跳过已主动设置背景颜色的应用</string>
     <string name="change_bg_color_list">配置排除列表</string>
     <string name="configure_bg_colors_individually">单独配置应用背景颜色</string>
-    <string name="ignore_dark_mode">忽略 MIUI 深色模式</string>
-    <string name="ignore_dark_mode_tips">在深色模式下，MIUI 会将启动遮罩替换为固定颜色。开启此选项后，将解除此限制。</string>
+    <string name="ignore_dark_mode">忽略小米强制深色模式</string>
+    <string name="ignore_dark_mode_tips">在深色模式下，小米会强制将启动遮罩背景替换为固定颜色。开启此选项后，将解除此限制。</string>
     <string name="remove_bg_drawable">移除截图背景</string>
     <string name="remove_bg_drawable_tips">如果 Splash Screen 的背景为应用内截图，可开启此选项移除。</string>
     <string name="force_show_splash_screen">强制显示遮罩</string>
-    <string name="force_show_splash_screen_tips">如果有部分应用没有显示Splash Screen, 请尝试开启此选项并将其加入到应用列表。\n注意：开启此选项需要在 Xposed 管理器的作用域中勾选 系统框架，并重启手机。</string>
+    <string name="force_show_splash_screen_tips">如果有部分应用没有显示 Splash Screen, 请尝试开启此选项并将其加入到应用列表。\n注意：开启此选项需要在 LSPosed 管理器的作用域中勾选「系统框架」并重启手机。</string>
     <string name="force_show_splash_screen_list">配置应用列表</string>
     <string name="reduce_splash_screen">减少不必要的启动遮罩</string>
     <string name="reduce_splash_screen_tips">减少因加入 强制显示遮罩 列表而使进入应用子进程也显示了的遮罩, 如微信小视频、支付宝小程序</string>
     <string name="force_enable_splash_screen">强制开启启动遮罩</string>
-    <string name="force_enable_splash_screen_tips">如果模块显示成功激活但是不起作用，请尝试开启此选项。\n如果模块可以正常运行，请「不要」开启此选项。\n开启此选项可能导致的问题：\n1. 可能会在不需要显示 Splash Screen 的场景显示启动遮罩。\n2. 如果应用主动设置了 Splash Screen 的背景图片，可能将无法显示。</string>
+    <string name="force_enable_splash_screen_tips">如果模块显示成功激活但是不起作用，请尝试开启此选项。\n如果模块可以正常运行，请「不要」开启此选项。\n开启此选项可能导致的问题：\n1、可能会在不需要显示 Splash Screen 的场景显示启动遮罩。\n2、可能导致应用主动设置的 Splash Screen 背景图片无法显示。</string>
     <string name="hot_start_compatible">将启动遮罩适用于热启动</string>
-    <string name="hot_start_compatible_tips">注意：开启此选项需要在Xposed管理器的作用域中勾选 系统框架，并重启手机；此选项需要与 &quot;强制开启启动遮罩&quot; 同时开启</string>
+    <string name="hot_start_compatible_tips">注意：开启此选项需要在 LSPosed 管理器的作用域中勾选「系统框架」并重启手机；此选项需要与「强制开启启动遮罩」同时开启。</string>
     <string name="disable_splash_screen">彻底关闭 Splash Screen</string>
-    <string name="disable_splash_screen_tips">开启此选项需要在Xposed作用域中勾选 系统框架 并重启手机；由于开启了此选项，模块其他设置将成为摆设，所以没有必要在 Xposed 作用域中勾选系统界面。</string>
+    <string name="disable_splash_screen_tips">注意：开启此选项需要在 LSPosed 管理器的作用域中勾选「系统框架」并重启手机；开启此选项后，模块内其他设置将成为摆设，因此没必要在作用域中勾选「系统界面」。</string>
 
     <!--应用配置界面-->
     <string name="custom_scope_title">作用域列表</string>
@@ -118,27 +123,23 @@
     <string name="background_image_title">移除列表</string>
     <string name="force_show_splash_screen_title">应用列表</string>
     <string name="min_duration_title">最小持续时长</string>
-    <string name="hide_splash_screen_icon_title"> 隐藏图标</string>
-
+    <string name="hide_splash_screen_icon_title">隐藏图标</string>
     <string name="select_system_apps">选中系统应用</string>
     <string name="clear_selected_apps">清除选中应用</string>
     <string name="save_successful">保存成功</string>
-
-    <string name="search_hint">可输入 APP 名称、包名</string>
-    <string name="save_hint">勾选完成后记得点击下方保存按钮，保存成功后立即生效</string>
-    <string name="min_duration_sub_setting_hint">点击应用名称设置持续时长，点击复选框以启用该条目\n勾选完成后记得点击下方保存按钮，保存成功后立即生效</string>
-    <string name="custom_bg_color_sub_setting_hint">· 点击应用名称进入颜色设定界面\n· 如需设置深色模式下的颜色，请在手机系统设置中开启深色模式后进入此界面进行配置\n· 做出配置后请不要在保存前切换深色模式状态，否则未保存的配置将会丢失\n· 配置完成后记得点击下方保存按钮，保存成功后立即生效</string>
-    <string name="loading">正在加载……</string>
+    <string name="search_hint">可输入应用名称、包名</string>
+    <string name="save_hint">点击保存按钮以应用配置，会立即生效。</string>
+    <string name="min_duration_sub_setting_hint">点击左侧设置持续时长，点击复选框启用。\n点击保存按钮以应用配置，会立即生效。</string>
+    <string name="custom_bg_color_sub_setting_hint">不要在保存前切换颜色模式，否则配置将丢失。\n点击保存按钮以应用配置，会立即生效。</string>
+    <string name="loading">正在加载…</string>
     <string name="save">保存</string>
     <string name="not_saved_title">配置未保存</string>
     <string name="not_saved_hint">更改的设置项还未保存，你确定要舍弃修改吗</string>
-
-
     <string name="set_default_min_duration">默认最小持续时长</string>
-    <string name="min_duration_separate_configuration">单独配置应用</string>
+    <string name="min_duration_separate_configuration">单独配置应用最小持续时长</string>
     <string name="set_min_duration">设置遮罩最小持续时长</string>
     <string name="not_set_min_duration">未设置</string>
-    <string name="set_min_duration_unit">单位：毫秒</string>
+    <string name="set_min_duration_unit">单位：毫秒，范围：0–2000</string>
 
     <!--颜色配置界面-->
     <string name="please_select">长按图标取色或选择下列颜色：</string>
@@ -156,9 +157,10 @@
     <string name="undo_modification">撤销本次修改</string>
     <string name="reset">恢复默认</string>
     <string name="target_color_mode">颜色生效模式</string>
-    <string name="target_color_mode_tips">当前颜色的生效模式，浅色模式和深色模式需要分别配置</string>
+    <string name="target_color_mode_tips">选择配置的颜色模式，浅色与深色模式需要分别配置。</string>
     <string name="target_color_mode_light">浅色模式</string>
     <string name="target_color_mode_dark">深色模式</string>
+
     <!--关于页面-->
     <string name="version">v%s</string>
     <string name="follow_me">点个关注，不迷路</string>
@@ -168,7 +170,6 @@
     <string name="developer_milu">迷璐</string>
     <string name="open_source_repo">开源仓库</string>
     <string name="open_source_license">开放源代码许可</string>
-
 
     <!--开发者选项-->
     <string name="dev_hook_info_empty">空</string>

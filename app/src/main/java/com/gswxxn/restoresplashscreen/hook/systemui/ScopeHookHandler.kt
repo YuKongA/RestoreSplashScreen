@@ -1,17 +1,20 @@
 package com.gswxxn.restoresplashscreen.hook.systemui
 
 import android.content.Context
-import com.gswxxn.restoresplashscreen.data.DataConst
 import com.gswxxn.restoresplashscreen.data.StartingWindowInfo
+import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.base.HookManager
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.exceptCurrentApp
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.isHooking
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.isMIUI
-import com.gswxxn.restoresplashscreen.utils.YukiHelper.printLog
-import com.highcapable.yukihookapi.hook.factory.current
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
+import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
+import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
+import com.gswxxn.restoresplashscreen.hook.utils.toTyped
+import com.highcapable.kavaref.KavaRef.Companion.resolve
 
 /**
  * 此对象用于处理作用域 Hook
@@ -28,7 +31,7 @@ object ScopeHookHandler : BaseHookHandler() {
 
         // 将作用域外的应用替换为空白启动遮罩
         SystemUIHooker.Members.makeSplashScreenContentView.addBeforeHook({ true }) {
-            val isReplaceToEmptySplashScreen = prefs.get(DataConst.REPLACE_TO_EMPTY_SPLASH_SCREEN)
+            val isReplaceToEmptySplashScreen = prefs.get(Preferences.Icon.REPLACE_TO_EMPTY_SPLASH_SCREEN)
 
             if (isReplaceToEmptySplashScreen && exceptCurrentApp) {
                 args(args.indexOfFirst { it is Int }).set(StartingWindowInfo.STARTING_WINDOW_TYPE_LEGACY_SPLASH_SCREEN)
@@ -46,20 +49,23 @@ object ScopeHookHandler : BaseHookHandler() {
          */
         if (isMIUI) {
             SystemUIHooker.Members.getBGColorFromCache.addAfterHook {
-                instance.current().field { name = "mTmpAttrs" }.any()!!.current().field { name = "mIconBgColor" }.set(1)
+                val mTmpAttrs = instance!!.javaClass.resolve().firstField { name = "mTmpAttrs" }.getValueFrom<Any, Any>(instance)!!
+                mTmpAttrs.javaClass.resolve().firstField { name = "mIconBgColor" }.setValueTo(mTmpAttrs, 1)
                 printLog("getBGColorFromCache(): Set mIconBgColor to 1")
             }
 
             // 重置因实现自定义作用域而影响到的 mTmpAttrs
             SystemUIHooker.Members.startingWindowViewBuilderConstructor.addAfterHook {
-                val mSplashscreenContentDrawer = instance.current().field { name = "this$0" }.any()!!
-                val mTmpAttrs = mSplashscreenContentDrawer.current().field { name = "mTmpAttrs" }.any()!!
+                val mSplashscreenContentDrawer =
+                    instance!!.javaClass.resolve().firstField { name = "this$0" }.getValueFrom<Any, Any>(instance)!!
+                val mTmpAttrs = mSplashscreenContentDrawer.javaClass.resolve().firstField { name = "mTmpAttrs" }
+                    .getValueFrom<Any, Any>(mSplashscreenContentDrawer)!!
                 val context = args.first { it is Context }
 
-                mSplashscreenContentDrawer.current().method {
+                mSplashscreenContentDrawer.javaClass.resolve().firstMethod {
                     name = "getWindowAttrs"
-                    paramCount(2)
-                }.call(context, mTmpAttrs)
+                    parameterCount = 2
+                }.toTyped<Any>().invoke(mSplashscreenContentDrawer, context, mTmpAttrs)
             }
         }
     }
