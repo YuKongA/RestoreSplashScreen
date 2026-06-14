@@ -5,24 +5,18 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.add
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,30 +25,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
-import com.gswxxn.restoresplashscreen.data.Pages
-import com.gswxxn.restoresplashscreen.ui.MainActivity
+import com.gswxxn.restoresplashscreen.data.Route
 import com.gswxxn.restoresplashscreen.ui.component.MyAppInfo
 import com.gswxxn.restoresplashscreen.ui.component.SpliceCard
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
 import com.highcapable.yukihookapi.hook.factory.prefs
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.base.HazeScaffold
-import dev.lackluster.hyperx.compose.base.IconSize
-import dev.lackluster.hyperx.compose.base.ImageIcon
-import dev.lackluster.hyperx.compose.navigation.navigateTo
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
+import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.ui.component.IconSize
+import dev.lackluster.hyperx.ui.component.ImageIcon
+import dev.lackluster.hyperx.ui.layout.HyperXScaffold
+import dev.lackluster.hyperx.ui.layout.LocalHyperXLayoutConfig
+import dev.lackluster.hyperx.ui.layout.LocalLayoutPadding
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -76,18 +68,27 @@ import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 /**
  * 单独配置背景颜色
  */
 @Composable
-fun BgIndividualPage(
-    navController: NavController,
-    adjustPadding: PaddingValues,
-    mode: BasePageDefaults.Mode,
-    blurEnabled: MutableState<Boolean> = MainActivity.blurEnabled
-) {
+fun BgIndividualPage() {
     val context = LocalContext.current
+
+    val navigator = LocalNavigator.current
+    val uiConfig = LocalHyperXLayoutConfig.current
+    val blurEnabled = uiConfig.isBlurEnabled
+    val layoutPadding = LocalLayoutPadding.current
+
+    val containerColor = MiuixTheme.colorScheme.surface
+    val blurTintAlpha = if (containerColor.luminance() >= 0.5f) {
+        uiConfig.lightBlurAlpha
+    } else {
+        uiConfig.darkBlurAlpha
+    }
+
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
     val listState = rememberLazyListState()
     var queryString by remember { mutableStateOf("") }
@@ -160,28 +161,25 @@ fun BgIndividualPage(
             }
         }
     }
-    val layoutDirection = LocalLayoutDirection.current
-    val systemBarInsets =
-        WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal).asPaddingValues()
-    val navigationIconPadding = PaddingValues.Absolute(
-        left = if (mode != BasePageDefaults.Mode.SPLIT_RIGHT) systemBarInsets.calculateLeftPadding(layoutDirection) else 0.dp
-    )
 
-    HazeScaffold(
-        modifier = Modifier.fillMaxSize(),
+    HyperXScaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .scrollEndHaptic(),
+        containerColor = containerColor,
+        layoutPadding = layoutPadding,
         topBar = { contentPadding ->
             TopAppBar(
-                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.surface,
+                color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
                 title = stringResource(R.string.configure_bg_colors_individually),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(
                         modifier = Modifier
-                            .padding(navigationIconPadding)
                             .padding(start = 21.dp)
                             .size(40.dp),
                         onClick = {
-                            navController.popBackStack()
+                            navigator.pop()
                         }
                     ) {
                         Icon(
@@ -193,18 +191,15 @@ fun BgIndividualPage(
                     }
                 },
                 defaultWindowInsetsPadding = false,
-                horizontalPadding = 28.dp + contentPadding.calculateLeftPadding(LocalLayoutDirection.current)
+                titlePadding = 28.dp + contentPadding.calculateStartPadding(LocalLayoutDirection.current),
+                navigationIconPadding = contentPadding.calculateStartPadding(LocalLayoutDirection.current),
+                actionIconPadding = contentPadding.calculateEndPadding(LocalLayoutDirection.current)
             )
         },
-        blurTopBar = blurEnabled.value,
-        blurBottomBar = blurEnabled.value,
-        hazeStyle = HazeStyle(
-            blurRadius = 25.dp,
-            noiseFactor = 0f,
-            backgroundColor = MiuixTheme.colorScheme.surface,
-            tint = HazeTint(MiuixTheme.colorScheme.surface.copy(0.67f))
-        ),
-        adjustPadding = adjustPadding,
+        blurTopBar = blurEnabled,
+        topBarBlurFractionProvider = { scrollBehavior.state.overlappedFraction },
+        blurBottomBar = blurEnabled,
+        blurTintAlpha = blurTintAlpha,
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -273,15 +268,13 @@ fun BgIndividualPage(
                     ) {
                         TextPreference(
                             icon = ImageIcon(
-                                iconBitmap = item.icon.toBitmap().asImageBitmap(),
-                                iconSize = IconSize.App
+                                bitmap = item.icon.toBitmap().asImageBitmap(),
+                                size = IconSize.App
                             ),
                             title = item.appName,
                             summary = item.packageName
                         ) {
-                            navController.navigateTo(
-                                "${Pages.CONFIG_COLOR_PICKER}?PkgName=${item.packageName}"
-                            )
+                            navigator.push(Route.ColorPicker(item.packageName))
                         }
                     }
                 }

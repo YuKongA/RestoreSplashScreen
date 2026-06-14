@@ -6,43 +6,38 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
-import com.gswxxn.restoresplashscreen.data.Pages
-import com.gswxxn.restoresplashscreen.ui.MainActivity
+import com.gswxxn.restoresplashscreen.data.Route
 import com.gswxxn.restoresplashscreen.ui.component.HeaderCard
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.highcapable.yukihookapi.hook.factory.prefs
-import dev.lackluster.hyperx.compose.base.BasePage
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.navigation.navigateTo
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
+import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.navigation.Navigator
+import dev.lackluster.hyperx.ui.layout.HyperXPage
+import dev.lackluster.hyperx.ui.preference.ItemPosition
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
 
 /**
  * 显示设置 界面
  */
 @Composable
-fun DisplayPage(navController: NavController, adjustPadding: PaddingValues, mode: BasePageDefaults.Mode) {
-    BasePage(
-        navController = navController,
-        adjustPadding = adjustPadding,
+fun DisplayPage() {
+    val navigator = LocalNavigator.current
+    HyperXPage(
         title = stringResource(R.string.display_settings),
-        blurEnabled = MainActivity.blurEnabled,
-        mode = mode
     ) {
         item {
             HeaderCard(imageResID = R.drawable.demo_display, title = "DISPLAY")
 
-            SettingItems(navController)
+            SettingItems(navigator)
         }
     }
 }
@@ -51,19 +46,19 @@ fun DisplayPage(navController: NavController, adjustPadding: PaddingValues, mode
  * 分组设置
  */
 @Composable
-private fun SettingItems(navController: NavController) {
+private fun SettingItems(navigator: Navigator) {
     PreferenceGroup {
         // 遮罩最小持续时间
         TextPreference(
             title = stringResource(R.string.min_duration),
             summary = stringResource(R.string.min_duration_tips),
-            onClick = { navController.navigateTo(Pages.CONFIG_MIN_DURATION) }
+            onClick = { navigator.push(Route.MinDuration) }
         )
     }
     PreferenceGroup {
-        ForceShowSplashScreenSettingsGroup(navController)
+        ForceShowSplashScreenSettingsGroup(navigator)
     }
-    PreferenceGroup(last = true) {
+    PreferenceGroup(position = ItemPosition.Last) {
         OtherDisplaySettingsGroup()
     }
 }
@@ -72,7 +67,7 @@ private fun SettingItems(navController: NavController) {
  * 强制显示遮罩
  */
 @Composable
-private fun ForceShowSplashScreenSettingsGroup(navController: NavController) {
+private fun ForceShowSplashScreenSettingsGroup(navigator: Navigator) {
     val context = LocalContext.current
     val prefs = context.prefs()
     val forceShowSplash = remember { mutableStateOf(prefs.get(DataConst.FORCE_SHOW_SPLASH_SCREEN)) }
@@ -95,7 +90,7 @@ private fun ForceShowSplashScreenSettingsGroup(navController: NavController) {
         Column {
             // 配置应用列表
             TextPreference(title = stringResource(R.string.force_show_splash_screen_list)) {
-                navController.navigateTo(Pages.CONFIG_FORCE_SHOW_SPLASH)
+                navigator.push(Route.ForceSplash)
             }
             // 减少不必要的启动遮罩
             SwitchPreference(

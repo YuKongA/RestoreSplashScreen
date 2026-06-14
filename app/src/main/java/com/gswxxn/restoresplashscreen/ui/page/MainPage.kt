@@ -4,7 +4,6 @@ import android.content.Intent
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,10 +26,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.BuildConfig
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.Pages
+import com.gswxxn.restoresplashscreen.data.Route
 import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.ui.MainActivity.Companion.androidRestartNeeded
 import com.gswxxn.restoresplashscreen.ui.MainActivity.Companion.moduleActive
@@ -41,11 +40,12 @@ import com.gswxxn.restoresplashscreen.ui.page.data.ModuleStatusType
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.execShell
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.highcapable.yukihookapi.YukiHookAPI.Status.Executor
-import dev.lackluster.hyperx.compose.base.BasePage
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.base.ImageIcon
-import dev.lackluster.hyperx.compose.navigation.navigateWithPopup
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
+import dev.lackluster.hyperx.navigation.HyperXRoute
+import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.navigation.Navigator
+import dev.lackluster.hyperx.ui.component.ImageIcon
+import dev.lackluster.hyperx.ui.layout.HyperXPage
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -57,10 +57,10 @@ import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
-import top.yukonga.miuix.kmp.extra.SuperDialog
-import top.yukonga.miuix.kmp.extra.SuperListPopup
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.MoreCircle
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
+import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
@@ -68,22 +68,19 @@ import top.yukonga.miuix.kmp.utils.PressFeedbackType
  * 主界面 Page
  */
 @Composable
-fun MainPage(navController: NavController, adjustPadding: PaddingValues, mode: BasePageDefaults.Mode) {
+fun MainPage() {
+    val navigator = LocalNavigator.current
     val dialogRestartVisibility = remember { mutableStateOf(false) }
 
-    BasePage(
-        navController = navController,
-        adjustPadding = adjustPadding,
+    HyperXPage(
         title = stringResource(R.string.app_name),
-        blurEnabled = MainActivity.blurEnabled,
-        mode = mode,
         navigationIcon = { },
-        actions = { PopUpMenu(it, navController, dialogRestartVisibility) }
+        actions = { PopUpMenu(navigator, dialogRestartVisibility) }
     ) {
         item {
             TopCard()
 
-            SettingItems(navController)
+            SettingItems(navigator)
 
             Text(
                 modifier = Modifier.padding(horizontal = 28.dp, vertical = 8.dp),
@@ -177,20 +174,20 @@ private fun TopCard() {
  */
 @Composable
 private fun SettingItems(
-    navController: NavController
+    navigator: Navigator
 ) {
     PreferenceGroup {
-        ModuleSettingPreference(ModulePreferenceRes.BasicSettings, navController)
+        ModuleSettingPreference(ModulePreferenceRes.BasicSettings, navigator)
     }
 
     PreferenceGroup {
-        ModuleSettingPreference(ModulePreferenceRes.CustomScopeSettings, navController)
-        ModuleSettingPreference(ModulePreferenceRes.IconSettings, navController)
-        ModuleSettingPreference(ModulePreferenceRes.BottomSettings, navController)
-        ModuleSettingPreference(ModulePreferenceRes.BackgroundSettings, navController)
-        ModuleSettingPreference(ModulePreferenceRes.DisplaySettings, navController)
+        ModuleSettingPreference(ModulePreferenceRes.CustomScopeSettings, navigator)
+        ModuleSettingPreference(ModulePreferenceRes.IconSettings, navigator)
+        ModuleSettingPreference(ModulePreferenceRes.BottomSettings, navigator)
+        ModuleSettingPreference(ModulePreferenceRes.BackgroundSettings, navigator)
+        ModuleSettingPreference(ModulePreferenceRes.DisplaySettings, navigator)
         if (MainActivity.devMode.value) {
-            ModuleSettingPreference(ModulePreferenceRes.DevSettings, navController)
+            ModuleSettingPreference(ModulePreferenceRes.DevSettings, navigator)
         }
     }
 
@@ -211,8 +208,7 @@ private fun SettingItems(
  */
 @Composable
 private fun PopUpMenu(
-    padding: PaddingValues,
-    navController: NavController,
+    navigator: Navigator,
     dialogRestartVisibility: MutableState<Boolean>
 ) {
     val hapticFeedback = LocalHapticFeedback.current
@@ -222,10 +218,44 @@ private fun PopUpMenu(
         stringResource(R.string.restart),
         stringResource(R.string.about)
     )
+
+    // 弹出菜单
+    OverlayListPopup(
+        show = showTopPopup.value,
+        popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
+        alignment = PopupPositionProvider.Align.TopEnd,
+        onDismissRequest = {
+            showTopPopup.value = false
+        }
+    ) {
+        ListPopupColumn {
+            contextMenuItems.forEachIndexed { index, string ->
+                DropdownImpl(
+                    text = string,
+                    optionSize = contextMenuItems.size,
+                    isSelected = false,
+                    onSelectedIndexChange = {
+                        when (it) {
+                            0 -> {
+                                dialogRestartVisibility.value = true
+                            }
+
+                            1 -> {
+                                navigator.popUntil { route -> route is HyperXRoute.Main }
+                                navigator.push(Route.About)
+                            }
+                        }
+                        showTopPopup.value = false
+                    },
+                    index = index
+                )
+            }
+        }
+    }
+
     // 未弹出时的按钮
     IconButton(
         modifier = Modifier
-            .padding(padding)
             .padding(end = 21.dp)
             .size(40.dp),
         onClick = {
@@ -239,38 +269,6 @@ private fun PopUpMenu(
             contentDescription = "Menu"
         )
     }
-
-    // 弹出菜单
-    SuperListPopup(
-        show = showTopPopup,
-        popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-        alignment = PopupPositionProvider.Align.TopEnd,
-        onDismissRequest = {
-            showTopPopup.value = false
-        }
-    ) {
-        ListPopupColumn {
-            contextMenuItems.forEachIndexed { index, string ->
-                DropdownImpl(
-                    text = string,
-                    optionSize = contextMenuItems.size,
-                    isSelected = false,
-                    index = index
-                ) {
-                    when (it) {
-                        0 -> {
-                            dialogRestartVisibility.value = true
-                        }
-
-                        1 -> {
-                            navController.navigateWithPopup(Pages.ABOUT)
-                        }
-                    }
-                    showTopPopup.value = false
-                }
-            }
-        }
-    }
 }
 
 /**
@@ -281,10 +279,10 @@ private fun RestartDialog(
     show: MutableState<Boolean>
 ) {
     val context = LocalContext.current
-    SuperDialog(
+    OverlayDialog(
         title = stringResource(R.string.restart_title),
         summary = stringResource(R.string.restart_message),
-        show = show,
+        show = show.value,
         onDismissRequest = { show.value = false },
     ) {
         Column {
@@ -329,23 +327,49 @@ private fun RestartDialog(
  * 根据 [ModulePreferenceRes] 提供的资源来创建模块首页设置项
  *
  * @param modulePreferenceRes 模块偏好配置资源，包含图标资源、标题资源和导航目标
- * @param navController 导航控制器，用于执行页面跳转。如果为 null，则不会触发导航
+ * @param navigator 导航控制器，用于执行页面跳转。如果为 null，则不会触发导航
  * @param onClick 点击事件的回调函数。如果不为 null，则会在点击时执行此回调
  */
 @Composable
 fun ModuleSettingPreference(
     modulePreferenceRes: ModulePreferenceRes,
-    navController: NavController? = null,
+    navigator: Navigator? = null,
     onClick: (() -> Unit)? = null
 ) {
     TextPreference(
-        icon = ImageIcon(iconRes = modulePreferenceRes.iconRes),
+        icon = ImageIcon(resId = modulePreferenceRes.iconRes),
         title = stringResource(modulePreferenceRes.stringRes),
         ignoreModuleActiveStatus = true
     ) {
         onClick?.invoke()
-        modulePreferenceRes.navigateTo?.let { navController?.navigateWithPopup(it) }
+        modulePreferenceRes.navigateTo?.toRoute()?.let { route ->
+            navigator?.popUntil { it is HyperXRoute.Main }
+            navigator?.push(route)
+        }
     }
+}
+
+/**
+ * 将旧的页面常量（[Pages]）映射为新的导航路由（[Route]）
+ */
+private fun String.toRoute(): Route? = when (this) {
+    Pages.ABOUT -> Route.About
+    Pages.BASIC_SETTINGS -> Route.Basic
+    Pages.SCOPE_SETTINGS -> Route.Scope
+    Pages.ICON_SETTINGS -> Route.Icon
+    Pages.BOTTOM_SETTINGS -> Route.Bottom
+    Pages.BACKGROUND_SETTINGS -> Route.Background
+    Pages.DISPLAY_SETTINGS -> Route.Display
+    Pages.DEVELOPER_SETTINGS -> Route.Developer
+    Pages.CONFIG_CUSTOM_SCOPE -> Route.CustomScope
+    Pages.CONFIG_IGNORE_APP_ICON -> Route.IgnoreAppIcon
+    Pages.CONFIG_HIDE_SPLASH_ICON -> Route.HideIcon
+    Pages.CONFIG_REMOVE_BRANDING -> Route.RemoveBranding
+    Pages.CONFIG_BACKGROUND_EXCEPT -> Route.BackgroundExcept
+    Pages.CONFIG_BACKGROUND_INDIVIDUALLY -> Route.BgIndividual
+    Pages.CONFIG_MIN_DURATION -> Route.MinDuration
+    Pages.CONFIG_FORCE_SHOW_SPLASH -> Route.ForceSplash
+    else -> null
 }
 
 /**

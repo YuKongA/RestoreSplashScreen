@@ -10,12 +10,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.captionBar
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,7 +22,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -43,37 +40,37 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import androidx.core.graphics.drawable.toBitmap
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
-import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.ui.component.SpliceCard
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.notEqualsTo
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toSet
 import com.highcapable.yukihookapi.hook.factory.prefs
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.lackluster.hyperx.compose.base.AlertDialog
-import dev.lackluster.hyperx.compose.base.AlertDialogMode
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.base.DrawableResIcon
-import dev.lackluster.hyperx.compose.base.HazeScaffold
-import dev.lackluster.hyperx.compose.base.IconSize
-import dev.lackluster.hyperx.compose.base.ImageIcon
-import dev.lackluster.hyperx.compose.preference.EditTextDataType
-import dev.lackluster.hyperx.compose.preference.EditTextDialog
-import dev.lackluster.hyperx.compose.preference.EditTextPreference
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
+import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.ui.component.IconSize
+import dev.lackluster.hyperx.ui.component.ImageIcon
+import dev.lackluster.hyperx.ui.component.PreferenceIconSlot
+import dev.lackluster.hyperx.ui.dialog.AlertDialog
+import dev.lackluster.hyperx.ui.dialog.AlertDialogMode
+import dev.lackluster.hyperx.ui.dialog.EditTextDialog
+import dev.lackluster.hyperx.ui.layout.HyperXScaffold
+import dev.lackluster.hyperx.ui.layout.LocalHyperXLayoutConfig
+import dev.lackluster.hyperx.ui.layout.LocalLayoutPadding
+import dev.lackluster.hyperx.ui.preference.EditTextInputType
+import dev.lackluster.hyperx.ui.preference.EditTextPreference
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
+import dev.lackluster.hyperx.ui.preference.ValuePosition
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -102,6 +99,7 @@ import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.icon.extended.Info
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
+import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.text.Collator
 import java.util.Locale
 
@@ -109,20 +107,24 @@ import java.util.Locale
  * 基础设置 - 遮罩最小持续时长
  */
 @Composable
-fun MinDurationPage(
-    navController: NavController,
-    adjustPadding: PaddingValues,
-    mode: BasePageDefaults.Mode,
-    blurEnabled: MutableState<Boolean> = MainActivity.blurEnabled,
-) {
+fun MinDurationPage() {
     val context = LocalContext.current
 //    val checkedListKey = DataConst.MIN_DURATION_LIST.key
 //    val configMapKey = DataConst.MIN_DURATION_CONFIG_MAP.key
+
+    val navigator = LocalNavigator.current
+    val uiConfig = LocalHyperXLayoutConfig.current
+    val blurEnabled = uiConfig.isBlurEnabled
+    val layoutPadding = LocalLayoutPadding.current
+
+    val containerColor = MiuixTheme.colorScheme.surface
+    val blurTintAlpha = if (containerColor.luminance() >= 0.5f) {
+        uiConfig.lightBlurAlpha
+    } else {
+        uiConfig.darkBlurAlpha
+    }
+
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    val hazeTint = MiuixTheme.colorScheme.surface.copy(
-        if (scrollBehavior.state.collapsedFraction <= 0f) 1f
-        else lerp(1f, 0.67f, (scrollBehavior.state.collapsedFraction))
-    )
     val listState = rememberLazyListState()
     val modifiedDialogVisibility = remember { mutableStateOf(false) }
 
@@ -164,7 +166,7 @@ fun MinDurationPage(
         if (currentCheckedList.notEqualsTo(tmpCheckedList) || currentConfigMap.notEqualsTo(tmpConfigMap.toSet())) {
             modifiedDialogVisibility.value = true
         } else {
-            navController.popBackStack()
+            navigator.pop()
         }
     }
 
@@ -231,24 +233,21 @@ fun MinDurationPage(
             }
         }
     }
-    val layoutDirection = LocalLayoutDirection.current
-    val systemBarInsets =
-        WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal).asPaddingValues()
-    val navigationIconPadding = PaddingValues.Absolute(
-        left = if (mode != BasePageDefaults.Mode.SPLIT_RIGHT) systemBarInsets.calculateLeftPadding(layoutDirection) else 0.dp
-    )
 
-    HazeScaffold(
-        modifier = Modifier.fillMaxSize(),
+    HyperXScaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .scrollEndHaptic(),
+        containerColor = containerColor,
+        layoutPadding = layoutPadding,
         topBar = { contentPadding ->
             TopAppBar(
-                color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.surface,
+                color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
                 title = stringResource(R.string.min_duration_title),
                 scrollBehavior = scrollBehavior,
                 navigationIcon = {
                     IconButton(
                         modifier = Modifier
-                            .padding(navigationIconPadding)
                             .padding(start = 21.dp)
                             .size(40.dp),
                         onClick = {
@@ -263,7 +262,7 @@ fun MinDurationPage(
                             if (currentCheckedList.notEqualsTo(tmpCheckedList) || currentConfigMap.notEqualsTo(tmpConfigMap.toSet())) {
                                 modifiedDialogVisibility.value = true
                             } else {
-                                navController.popBackStack()
+                                navigator.pop()
                             }
                         }
                     ) {
@@ -276,7 +275,9 @@ fun MinDurationPage(
                     }
                 },
                 defaultWindowInsetsPadding = false,
-                horizontalPadding = 28.dp + contentPadding.calculateLeftPadding(LocalLayoutDirection.current)
+                titlePadding = 28.dp + contentPadding.calculateStartPadding(LocalLayoutDirection.current),
+                navigationIconPadding = contentPadding.calculateStartPadding(LocalLayoutDirection.current),
+                actionIconPadding = contentPadding.calculateEndPadding(LocalLayoutDirection.current)
             )
         },
         bottomBar = { contentPadding ->
@@ -293,9 +294,7 @@ fun MinDurationPage(
                 )
             }
             Surface(
-                color = MiuixTheme.colorScheme.surface.copy(
-                    if (blurEnabled.value) 0f else 1f
-                ),
+                color = if (blurEnabled) Color.Transparent else MiuixTheme.colorScheme.surface,
             ) {
                 Column(
                     modifier = Modifier
@@ -347,15 +346,10 @@ fun MinDurationPage(
                 }
             }
         },
-        blurTopBar = blurEnabled.value,
-        blurBottomBar = blurEnabled.value,
-        hazeStyle = HazeStyle(
-            blurRadius = 25.dp,
-            noiseFactor = 0f,
-            backgroundColor = MiuixTheme.colorScheme.surface,
-            tint = HazeTint(hazeTint)
-        ),
-        adjustPadding = adjustPadding,
+        blurTopBar = blurEnabled,
+        topBarBlurFractionProvider = { scrollBehavior.state.overlappedFraction },
+        blurBottomBar = blurEnabled,
+        blurTintAlpha = blurTintAlpha,
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -405,12 +399,23 @@ fun MinDurationPage(
             }
             item {
                 PreferenceGroup {
+                    val defaultMinDuration = remember {
+                        mutableIntStateOf(context.prefs().get(DataConst.MIN_DURATION))
+                    }
                     EditTextPreference(
                         title = stringResource(R.string.set_default_min_duration),
-                        key = DataConst.MIN_DURATION.key,
-                        dataType = EditTextDataType.INT,
+                        text = defaultMinDuration.intValue.toString(),
+                        inputType = EditTextInputType.Number,
+                        valuePosition = ValuePosition.Value,
                         dialogMessage = stringResource(R.string.set_min_duration_unit),
-                        isValueValid = { (it as? Int) in 0..1000 }
+                        onTextChange = { newText ->
+                            newText.toIntOrNull()?.let { newValue ->
+                                if (newValue in 0..1000) {
+                                    context.prefs().edit { put(DataConst.MIN_DURATION, newValue) }
+                                    defaultMinDuration.intValue = newValue
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -441,8 +446,8 @@ fun MinDurationPage(
                     ) {
                         MinDurationPreference(
                             icon = ImageIcon(
-                                iconBitmap = item.icon.toBitmap().asImageBitmap(),
-                                iconSize = IconSize.App
+                                bitmap = item.icon.toBitmap().asImageBitmap(),
+                                size = IconSize.App
                             ),
                             title = item.appName,
                             summary = item.packageName,
@@ -487,7 +492,7 @@ fun MinDurationPage(
         positiveText = stringResource(R.string.button_reedit),
         onNegativeButton = {
             modifiedDialogVisibility.value = false
-            navController.popBackStack()
+            navigator.pop()
         }
     )
 }
@@ -520,7 +525,7 @@ fun MinDurationPreference(
         summary = summary,
         startAction = {
             icon?.let {
-                DrawableResIcon(it)
+                PreferenceIconSlot(it)
             }
         },
         endActions = {
@@ -543,17 +548,18 @@ fun MinDurationPreference(
                 }
             )
         },
-        insideMargin = PaddingValues((icon?.getHorizontalPadding() ?: 16.dp), 16.dp, 16.dp, 16.dp),
         onClick = {
             dialogVisibility.value = true
         }
     )
     EditTextDialog(
-        visibility = dialogVisibility,
+        visible = dialogVisibility.value,
         title = title,
         message = dialogMessage,
-        value = spValue.intValue.toString(),
-        onInputConfirm = { newString ->
+        initialText = spValue.intValue.toString(),
+        keyboardType = KeyboardType.Number,
+        onDismissRequest = { dialogVisibility.value = false },
+        onConfirm = { newString ->
             doOnInputConfirm(newString)
         }
     )

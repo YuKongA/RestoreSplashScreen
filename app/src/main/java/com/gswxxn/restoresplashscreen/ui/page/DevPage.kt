@@ -1,10 +1,10 @@
 package com.gswxxn.restoresplashscreen.ui.page
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -13,34 +13,35 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
 import com.gswxxn.restoresplashscreen.hook.base.HookManager
 import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.utils.YukiHelper.getHookInfo
-import dev.lackluster.hyperx.compose.base.BasePage
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
-import dev.lackluster.hyperx.compose.preference.SeekBarPreference
+import com.highcapable.yukihookapi.hook.factory.prefs
+import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.navigation.Navigator
+import dev.lackluster.hyperx.ui.layout.HyperXPage
+import dev.lackluster.hyperx.ui.preference.EditTextInputType
+import dev.lackluster.hyperx.ui.preference.ItemPosition
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
+import dev.lackluster.hyperx.ui.preference.SeekBarPreference
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import kotlin.math.roundToInt
 
 /**
  * 开发者选项
  */
 @Composable
-fun DevPage(navController: NavController, adjustPadding: PaddingValues, mode: BasePageDefaults.Mode) {
-    BasePage(
-        navController = navController,
-        adjustPadding = adjustPadding,
+fun DevPage() {
+    val navigator = LocalNavigator.current
+    HyperXPage(
         title = stringResource(R.string.dev_settings),
-        blurEnabled = MainActivity.blurEnabled,
-        mode = mode
     ) {
         item {
-            SettingItems(navController)
+            SettingItems(navigator)
         }
     }
 }
@@ -49,23 +50,23 @@ fun DevPage(navController: NavController, adjustPadding: PaddingValues, mode: Ba
  * 分组设置
  */
 @Composable
-private fun SettingItems(navController: NavController) {
-    PreferenceGroup(first = true) { GeneralSettingItems(navController = navController) }
+private fun SettingItems(navigator: Navigator) {
+    PreferenceGroup(position = ItemPosition.First) { GeneralSettingItems(navigator = navigator) }
     PreferenceGroup(title = stringResource(R.string.icon_settings)) { IconSettingItems() }
-    PreferenceGroup(title = stringResource(R.string.hook_info), last = true) { HookInfo() }
+    PreferenceGroup(title = stringResource(R.string.hook_info), position = ItemPosition.Last) { HookInfo() }
 }
 
 /**
  * 通用设置
  */
 @Composable
-private fun GeneralSettingItems(navController: NavController) {
+private fun GeneralSettingItems(navigator: Navigator) {
     SwitchPreference(
         title = stringResource(R.string.dev_settings),
         prefsData = DataConst.ENABLE_DEV_SETTINGS,
         onCheckedChange = {
             MainActivity.devMode.value = it
-            navController.popBackStack()
+            navigator.pop()
         }
     )
 }
@@ -75,13 +76,22 @@ private fun GeneralSettingItems(navController: NavController) {
  */
 @Composable
 private fun IconSettingItems() {
+    val prefs = LocalContext.current.prefs()
+    val roundCornerRate = remember {
+        mutableFloatStateOf(prefs.get(DataConst.DEV_ICON_ROUND_CORNER_RATE).toFloat())
+    }
     SeekBarPreference(
         title = stringResource(R.string.dev_icon_round_corner_rate),
-        key = DataConst.DEV_ICON_ROUND_CORNER_RATE.key,
-        defValue = DataConst.DEV_ICON_ROUND_CORNER_RATE.value,
-        min = 0,
-        max = 50,
-        format = "%d%% / 50%%"
+        value = roundCornerRate.floatValue,
+        onValueChange = { roundCornerRate.floatValue = it },
+        onValueChangeFinished = {
+            prefs.edit { put(DataConst.DEV_ICON_ROUND_CORNER_RATE, roundCornerRate.floatValue.roundToInt()) }
+        },
+        defaultValue = DataConst.DEV_ICON_ROUND_CORNER_RATE.value.toFloat(),
+        min = 0f,
+        max = 50f,
+        dialogInputType = EditTextInputType.Number,
+        valueFormatter = { "%d%% / 50%%".format(it.roundToInt()) }
     )
 }
 

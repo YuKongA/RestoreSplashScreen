@@ -4,14 +4,12 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.BuildConfig
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
@@ -21,22 +19,18 @@ import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.BackupUtils
 import com.highcapable.yukihookapi.hook.factory.prefs
-import dev.lackluster.hyperx.compose.base.BasePage
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
+import dev.lackluster.hyperx.ui.layout.HyperXPage
+import dev.lackluster.hyperx.ui.preference.ItemPosition
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
 import java.time.LocalDateTime
 
 /**
  * 基础设置 界面
  */
 @Composable
-fun BasicPage(navController: NavController, adjustPadding: PaddingValues, mode: BasePageDefaults.Mode) {
-    BasePage(
-        navController = navController,
-        adjustPadding = adjustPadding,
+fun BasicPage() {
+    HyperXPage(
         title = stringResource(R.string.basic_settings),
-        blurEnabled = MainActivity.blurEnabled,
-        mode = mode
     ) {
         item {
             HeaderCard(imageResID = R.drawable.demo_basic, title = "BASIC")
@@ -54,7 +48,7 @@ private fun SettingItems() {
     PreferenceGroup {
         ModuleAppSettings()
     }
-    PreferenceGroup(title = stringResource(R.string.backup_restore_title), last = true) {
+    PreferenceGroup(title = stringResource(R.string.backup_restore_title), position = ItemPosition.Last) {
         BackupAndRestore()
     }
 }
@@ -123,19 +117,6 @@ private fun ModuleAppSettings() {
 @Composable
 private fun BackupAndRestore() {
     val context = LocalContext.current
-
-//    val backupUri = remember { mutableStateOf<Uri?>(null) }
-//    val restoreUri = remember { mutableStateOf<Uri?>(null) }
-//    backupUri.value?.let { BackupUtils.handleCreateDocument(context, it) }
-//    restoreUri.value?.let { BackupUtils.handleReadDocument(context, it) }
-//    val backupLauncher = rememberLauncherForActivityResult(
-//        contract = ActivityResultContracts.CreateDocument("application/json"),
-//        onResult = { backupUri.value = it }
-//    )
-//    val restoreLauncher = rememberLauncherForActivityResult(
-//        contract = ActivityResultContracts.OpenDocument(),
-//        onResult = { restoreUri.value = it }
-//    )
 
     // todo: 待测试
     val backupLauncher = rememberLauncherForActivityResult(

@@ -1,4 +1,4 @@
 [submodule "hyperx-compose"]
 	path = hyperx-compose
 	url = https://github.com/YuKongA/hyperx-compose.git
-	branch = RestoreSplashScreen
+	branch = main

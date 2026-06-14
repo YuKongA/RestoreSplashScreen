@@ -5,38 +5,33 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
-import com.gswxxn.restoresplashscreen.data.Pages
-import com.gswxxn.restoresplashscreen.ui.MainActivity
+import com.gswxxn.restoresplashscreen.data.Route
 import com.gswxxn.restoresplashscreen.ui.component.HeaderCard
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.highcapable.yukihookapi.hook.factory.prefs
-import dev.lackluster.hyperx.compose.base.BasePage
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.navigation.navigateTo
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
+import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.navigation.Navigator
+import dev.lackluster.hyperx.ui.layout.HyperXPage
+import dev.lackluster.hyperx.ui.preference.ItemPosition
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
 
 /**
  * 底部 界面
  */
 @Composable
-fun BottomPage(navController: NavController, adjustPadding: PaddingValues, mode: BasePageDefaults.Mode) {
-    BasePage(
-        navController = navController,
-        adjustPadding = adjustPadding,
+fun BottomPage() {
+    val navigator = LocalNavigator.current
+    HyperXPage(
         title = stringResource(R.string.bottom_settings),
-        blurEnabled = MainActivity.blurEnabled,
-        mode = mode
     ) {
         item {
             HeaderCard(
@@ -44,7 +39,7 @@ fun BottomPage(navController: NavController, adjustPadding: PaddingValues, mode:
                 title = "BRANDING\nIMAGE",
                 maxLines = 2
             )
-            PreferenceGroup(last = true) { RemoveBrandingImageSettingsGroup(navController) }
+            PreferenceGroup(position = ItemPosition.Last) { RemoveBrandingImageSettingsGroup(navigator) }
         }
     }
 }
@@ -53,7 +48,7 @@ fun BottomPage(navController: NavController, adjustPadding: PaddingValues, mode:
  * 移除底部图片
  */
 @Composable
-private fun RemoveBrandingImageSettingsGroup(navController: NavController) {
+private fun RemoveBrandingImageSettingsGroup(navigator: Navigator) {
     val context = LocalContext.current
     val prefs = context.prefs()
     val removeBrandingImage = remember { mutableStateOf(prefs.get(DataConst.REMOVE_BRANDING_IMAGE)) }
@@ -76,7 +71,7 @@ private fun RemoveBrandingImageSettingsGroup(navController: NavController) {
     ) {
         // 配置移除列表
         TextPreference(title = stringResource(R.string.remove_branding_image_list)) {
-            navController.navigateTo(Pages.CONFIG_REMOVE_BRANDING)
+            navigator.push(Route.RemoveBranding)
         }
     }
 }

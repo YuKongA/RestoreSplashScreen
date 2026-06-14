@@ -24,3 +24,6 @@
 }
 -keep class kotlin.Unit
 -keep class com.gswxxn.restoresplashscreen.ui.MainActivity
+
+# YukiHookAPI 1.3.x 的反射后端 KavaRef 引用了仅存在于 JDK 的类，Android 上不可用，忽略告警
+-dontwarn java.lang.reflect.AnnotatedType

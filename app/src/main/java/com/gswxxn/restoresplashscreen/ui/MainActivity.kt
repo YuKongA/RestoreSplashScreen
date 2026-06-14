@@ -14,9 +14,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.navigation3.runtime.NavEntry
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
-import com.gswxxn.restoresplashscreen.data.Pages
+import com.gswxxn.restoresplashscreen.data.Route
 import com.gswxxn.restoresplashscreen.ui.apppage.BackgroundExceptPage
 import com.gswxxn.restoresplashscreen.ui.apppage.BgIndividualPage
 import com.gswxxn.restoresplashscreen.ui.apppage.CustomScopePage
@@ -38,10 +39,10 @@ import com.gswxxn.restoresplashscreen.ui.page.ScopePage
 import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.hook.factory.dataChannel
 import com.highcapable.yukihookapi.hook.factory.prefs
-import dev.lackluster.hyperx.compose.activity.HyperXActivity
-import dev.lackluster.hyperx.compose.activity.SafeSP
-import dev.lackluster.hyperx.compose.base.HyperXApp
-import dev.lackluster.hyperx.compose.navigation.miuixComposable
+import dev.lackluster.hyperx.core.HyperXActivity
+import dev.lackluster.hyperx.core.SafeSP
+import dev.lackluster.hyperx.ui.layout.HyperXAppLayout
+import dev.lackluster.hyperx.ui.layout.HyperXLayoutConfig
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 class MainActivity : HyperXActivity() {
@@ -83,12 +84,13 @@ class MainActivity : HyperXActivity() {
 
     @Composable
     override fun AppContent() {
-        HyperXApp(
-            autoSplitView = splitEnabled,
-            mainPageContent = { navController, adjustPadding, mode ->
-                MainPage(navController, adjustPadding, mode)
-            },
-            emptyPageContent = {
+        HyperXAppLayout(
+            config = HyperXLayoutConfig(
+                isSplitScreenEnabled = splitEnabled.value,
+                isBlurEnabled = blurEnabled.value
+            ),
+            primaryContent = { MainPage() },
+            emptyContent = {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -101,29 +103,28 @@ class MainActivity : HyperXActivity() {
                     )
                 }
             },
-            otherPageBuilder = { navController, adjustPadding, mode ->
-                miuixComposable(Pages.ABOUT) { AboutPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.BASIC_SETTINGS) { BasicPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.SCOPE_SETTINGS) { ScopePage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.ICON_SETTINGS) { IconPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.BOTTOM_SETTINGS) { BottomPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.BACKGROUND_SETTINGS) { BackgroundPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.DISPLAY_SETTINGS) { DisplayPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.DEVELOPER_SETTINGS) { DevPage(navController, adjustPadding, mode) }
-
-                miuixComposable(Pages.CONFIG_CUSTOM_SCOPE) { CustomScopePage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.CONFIG_IGNORE_APP_ICON) { IgnoreAppIconPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.CONFIG_HIDE_SPLASH_ICON) { HideIconPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.CONFIG_REMOVE_BRANDING) { RemoveBrandingPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.CONFIG_BACKGROUND_EXCEPT) { BackgroundExceptPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.CONFIG_BACKGROUND_INDIVIDUALLY) { BgIndividualPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.CONFIG_MIN_DURATION) { MinDurationPage(navController, adjustPadding, mode) }
-                miuixComposable(Pages.CONFIG_FORCE_SHOW_SPLASH) { ForceSplashPage(navController, adjustPadding, mode) }
-
-                miuixComposable("${Pages.CONFIG_COLOR_PICKER}?PkgName={PkgName}") {
-                    val pkgName = it.arguments?.getString("PkgName") ?: ""
-                    /* Todo: 传入 是否为 OVERALL_BG 设置, 不应为现在的依据包名为 “” 来判断*/
-                    ColorPickerPage(navController, adjustPadding, pkgName, mode)
+            customEntryProvider = { key ->
+                NavEntry(key) {
+                    when (key) {
+                        is Route.About -> AboutPage()
+                        is Route.Basic -> BasicPage()
+                        is Route.Scope -> ScopePage()
+                        is Route.Icon -> IconPage()
+                        is Route.Bottom -> BottomPage()
+                        is Route.Background -> BackgroundPage()
+                        is Route.Display -> DisplayPage()
+                        is Route.Developer -> DevPage()
+                        is Route.CustomScope -> CustomScopePage()
+                        is Route.IgnoreAppIcon -> IgnoreAppIconPage()
+                        is Route.HideIcon -> HideIconPage()
+                        is Route.RemoveBranding -> RemoveBrandingPage()
+                        is Route.BackgroundExcept -> BackgroundExceptPage()
+                        is Route.BgIndividual -> BgIndividualPage()
+                        is Route.MinDuration -> MinDurationPage()
+                        is Route.ForceSplash -> ForceSplashPage()
+                        is Route.ColorPicker -> ColorPickerPage(key.pkgName)
+                        else -> {}
+                    }
                 }
             }
         )

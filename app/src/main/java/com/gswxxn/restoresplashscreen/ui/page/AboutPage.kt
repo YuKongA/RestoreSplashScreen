@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.toColorInt
 import androidx.core.net.toUri
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.BuildConfig
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
@@ -39,11 +37,11 @@ import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.highcapable.yukihookapi.hook.factory.prefs
-import dev.lackluster.hyperx.compose.base.BasePage
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.base.IconSize
-import dev.lackluster.hyperx.compose.base.ImageIcon
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
+import dev.lackluster.hyperx.ui.component.IconSize
+import dev.lackluster.hyperx.ui.component.ImageIcon
+import dev.lackluster.hyperx.ui.layout.HyperXPage
+import dev.lackluster.hyperx.ui.preference.ItemPosition
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Text
@@ -55,17 +53,9 @@ import kotlin.math.min
  * 关于页面
  */
 @Composable
-fun AboutPage(
-    navController: NavController,
-    adjustPadding: PaddingValues,
-    mode: BasePageDefaults.Mode
-) {
-    BasePage(
-        navController = navController,
-        adjustPadding = adjustPadding,
+fun AboutPage() {
+    HyperXPage(
         title = stringResource(R.string.about),
-        blurEnabled = MainActivity.blurEnabled,
-        mode = mode
     ) {
         item {
             val context = LocalContext.current
@@ -77,7 +67,7 @@ fun AboutPage(
             )
 
             // 开源许可信息
-            PreferenceGroup(title = stringResource(R.string.open_source_license), last = true) {
+            PreferenceGroup(title = stringResource(R.string.open_source_license), position = ItemPosition.Last) {
                 for (project in OpenSourceReference.entries) {
                     TextPreference(
                         title = "${project.author}/${project.name}",
@@ -171,8 +161,8 @@ private fun AppInfoCard() {
     val context = LocalContext.current
     TextPreference(
         icon = ImageIcon(
-            iconRes = R.mipmap.img_developer,
-            iconSize = IconSize.App,
+            resId = R.mipmap.img_developer,
+            size = IconSize.App,
             cornerRadius = 40.dp
         ),
         title = stringResource(R.string.developer_milu),
@@ -189,8 +179,8 @@ private fun AppInfoCard() {
     }
     TextPreference(
         icon = ImageIcon(
-            iconRes = R.drawable.img_github,
-            iconSize = IconSize.App
+            resId = R.drawable.img_github,
+            size = IconSize.App
         ),
         title = "GitHub",
         summary = stringResource(R.string.open_source_repo)

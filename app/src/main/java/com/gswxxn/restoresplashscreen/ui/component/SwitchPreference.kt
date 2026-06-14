@@ -1,20 +1,17 @@
 package com.gswxxn.restoresplashscreen.ui.component
 
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.highcapable.yukihookapi.YukiHookAPI
 import com.highcapable.yukihookapi.hook.factory.prefs
 import com.highcapable.yukihookapi.hook.xposed.prefs.data.PrefsData
-import dev.lackluster.hyperx.compose.base.DrawableResIcon
-import dev.lackluster.hyperx.compose.base.ImageIcon
-import top.yukonga.miuix.kmp.extra.SuperSwitch
+import dev.lackluster.hyperx.ui.component.ImageIcon
+import dev.lackluster.hyperx.ui.preference.SwitchPreference as HyperXSwitchPreference
 
 /**
  * 开关可组合函数, 使用 YukiHookAPI 管理 SharedPreferences, 并在模块未激活时提示用户
@@ -35,21 +32,20 @@ fun SwitchPreference(
         ?: prefsData?.let { remember { mutableStateOf(prefs.get(it)) } }
         ?: remember { mutableStateOf(false) }
 
-    SuperSwitch(
+    HyperXSwitchPreference(
         title = title,
         summary = summary,
-        startAction = { icon?.let { DrawableResIcon(it) } },
+        icon = icon,
         checked = currentChecked.value,
+        enabled = enabled,
         onCheckedChange = { newValue ->
             if (!YukiHookAPI.Status.isXposedModuleActive) {
                 context.toast(R.string.make_sure_active)
-                return@SuperSwitch
+            } else {
+                prefsData?.let { prefs.edit { put(it, newValue) } }
+                currentChecked.value = newValue
+                onCheckedChange?.invoke(newValue)
             }
-            prefsData?.let { prefs.edit { put(it, newValue) } }
-            currentChecked.value = newValue
-            onCheckedChange?.invoke(newValue)
         },
-        insideMargin = PaddingValues((icon?.getHorizontalPadding() ?: 16.dp), 16.dp, 16.dp, 16.dp),
-        enabled = enabled
     )
 }

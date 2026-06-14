@@ -6,44 +6,39 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
-import com.gswxxn.restoresplashscreen.data.Pages
-import com.gswxxn.restoresplashscreen.ui.MainActivity
+import com.gswxxn.restoresplashscreen.data.Route
 import com.gswxxn.restoresplashscreen.ui.component.HeaderCard
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.highcapable.yukihookapi.hook.factory.prefs
-import dev.lackluster.hyperx.compose.base.BasePage
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.navigation.navigateTo
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
+import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.navigation.Navigator
+import dev.lackluster.hyperx.ui.layout.HyperXPage
+import dev.lackluster.hyperx.ui.preference.ItemPosition
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
 
 /**
  * 作用域 界面
  */
 @Composable
-fun ScopePage(navController: NavController, adjustPadding: PaddingValues, mode: BasePageDefaults.Mode) {
-    BasePage(
-        navController = navController,
-        adjustPadding = adjustPadding,
+fun ScopePage() {
+    val navigator = LocalNavigator.current
+    HyperXPage(
         title = stringResource(R.string.custom_scope_settings),
-        blurEnabled = MainActivity.blurEnabled,
-        mode = mode
     ) {
         item {
             HeaderCard(imageResID = R.drawable.demo_scope, title = "SCOPE")
 
-            PreferenceGroup(last = true) {
-                SettingItems(navController)
+            PreferenceGroup(position = ItemPosition.Last) {
+                SettingItems(navigator)
             }
         }
     }
@@ -53,7 +48,7 @@ fun ScopePage(navController: NavController, adjustPadding: PaddingValues, mode: 
  * 作用阈设置项
  */
 @Composable
-private fun SettingItems(navController: NavController) {
+private fun SettingItems(navigator: Navigator) {
     val context = LocalContext.current
     val prefs = context.prefs()
 
@@ -83,7 +78,7 @@ private fun SettingItems(navController: NavController) {
             )
             // 配置应用列表
             TextPreference(title = stringResource(R.string.exception_mode_list)) {
-                navController.navigateTo(Pages.CONFIG_CUSTOM_SCOPE)
+                navigator.push(Route.CustomScope)
             }
         }
     }

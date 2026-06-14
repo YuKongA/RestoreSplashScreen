@@ -1,25 +1,46 @@
 @file:Suppress("UnstableApiUsage")
 
+import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
-    autowire(libs.plugins.com.android.application)
-    autowire(libs.plugins.org.jetbrains.kotlin.android)
-    autowire(libs.plugins.org.jetbrains.kotlin.plugin.serialization)
-    autowire(libs.plugins.com.google.devtools.ksp)
-    autowire(libs.plugins.org.jetbrains.kotlin.plugin.compose)
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.compose)
 }
 
+val projectProperties = Properties().apply {
+    file("gradle.properties").inputStream().use { load(it) }
+}
+
+fun projectProperty(key: String): String {
+    val raw = projectProperties.getProperty(key)
+        ?: throw GradleException("Missing property '$key' in app/gradle.properties")
+    return Regex("""\$\{([^}]+)}""")
+        .replace(raw.trim()) { projectProperty(it.groupValues[1].trim()) }
+        .trim()
+        .removeSurrounding("\"")
+}
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
+}
+
+fun secret(key: String): String =
+    System.getenv(key) ?: localProperties.getProperty(key) ?: ""
+
 android {
-    namespace = property.project.namespace
-    compileSdk = property.project.compileSdk
-    compileSdkMinor = 1
-    buildToolsVersion = "36.1.0"
+    namespace = projectProperty("project.namespace")
+    compileSdk = projectProperty("project.compileSdk").toInt()
 
     defaultConfig {
-        applicationId = property.project.applicationId
-        minSdk = property.project.minSdk
-        targetSdk = property.project.targetSdk
-        versionCode = property.project.versionCode
-        versionName = property.project.versionName
+        applicationId = projectProperty("project.applicationId")
+        minSdk = projectProperty("project.minSdk").toInt()
+        targetSdk = projectProperty("project.targetSdk").toInt()
+        versionCode = projectProperty("project.versionCode").toInt()
+        versionName = projectProperty("project.versionName")
     }
 
     packaging.resources {
@@ -32,18 +53,19 @@ android {
         includeInBundle = false
     }
 
-    val isKeyStoreAvailable = try {
-        property.keystore.path.isNotBlank() && property.keystore.pass.isNotBlank() && property.key.alias.isNotBlank() && property.key.password.isNotBlank()
-    } catch (_: Exception) {
-        false
-    }
+    val keystorePath = secret("KEYSTORE_PATH")
+    val keystorePass = secret("KEYSTORE_PASS")
+    val signingKeyAlias = secret("KEY_ALIAS")
+    val signingKeyPassword = secret("KEY_PASSWORD")
+    val isKeyStoreAvailable = keystorePath.isNotBlank() && keystorePass.isNotBlank() &&
+            signingKeyAlias.isNotBlank() && signingKeyPassword.isNotBlank()
     if (isKeyStoreAvailable) {
         signingConfigs {
             create("universal") {
-                storeFile = file(property.keystore.path)
-                storePassword = property.keystore.pass
-                keyAlias = property.key.alias
-                keyPassword = property.key.password
+                storeFile = file(keystorePath)
+                storePassword = keystorePass
+                keyAlias = signingKeyAlias
+                keyPassword = signingKeyPassword
                 enableV1Signing = true
                 enableV2Signing = true
                 enableV3Signing = true
@@ -61,7 +83,7 @@ android {
         }
     }
 
-    flavorDimensionList.add("tier")
+    flavorDimensions += "tier"
     productFlavors {
         create("CI") {
             dimension = "tier"
@@ -78,40 +100,47 @@ android {
         viewBinding = true
     }
 
-    applicationVariants.all {
-        val buildType = buildType.name
-        outputs.all {
-            if (this is com.android.build.gradle.internal.api.ApkVariantOutputImpl) {
-                this.outputFileName = "RestoreSplashScreen_${versionName}${if (buildType == "debug") "_debug" else ""}.apk"
-            }
-        }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
+}
 
-    kotlin {
-        jvmToolchain(21)
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.fromTarget("21")
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            (output as? com.android.build.api.variant.impl.VariantOutputImpl)?.outputFileName?.set(
+                output.versionName.map { versionName ->
+                    "RestoreSplashScreen_${versionName}${if (variant.buildType == "debug") "_debug" else ""}.apk"
+                }
+            )
+        }
     }
 }
 
 dependencies {
     implementation(projects.hyperxCompose)
 
-    compileOnly(de.robv.android.xposed.api)
-    implementation(com.highcapable.yukihookapi.api)
-    ksp(com.highcapable.yukihookapi.ksp.xposed)
-    implementation(androidx.palette.palette.ktx)
-    implementation(androidx.compose.material3.material3)
-    implementation(org.jetbrains.kotlinx.kotlinx.coroutines.android)
-    implementation(org.jetbrains.kotlinx.kotlinx.serialization.json)
+    compileOnly(libs.xposed.api)
+    implementation(libs.yukihookapi.api)
+    ksp(libs.yukihookapi.ksp.xposed)
+    implementation(libs.androidx.palette.ktx)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
 }
 
 tasks.register("getVersionCode") {
-    println("${property.project.versionCode}-${property.project.versionName}")
+    description = "getVersionCode"
+    println("${projectProperty("project.versionCode")}-${projectProperty("project.versionName")}")
 }
 
-/**
- * from [MiuiHomeR](https://github.com/qqlittleice/MiuiHome_R/blob/main/app/build.gradle.kts)
- * 用于获取 git commit id
- */
 fun getGitHeadRefsSuffix(project: Project): String {
     // .git/HEAD描述当前目录所指向的分支信息，内容示例："ref: refs/heads/master\n"
     val headFile = File(project.rootProject.projectDir, ".git" + File.separator + "HEAD")

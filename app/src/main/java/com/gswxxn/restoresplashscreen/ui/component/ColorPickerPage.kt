@@ -84,10 +84,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.toColorInt
-import androidx.navigation.NavController
 import androidx.palette.graphics.Palette
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
@@ -98,16 +96,19 @@ import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils.getBgColor
 import com.gswxxn.restoresplashscreen.utils.IconPackManager
 import com.highcapable.yukihookapi.hook.factory.prefs
-import com.kyant.capsule.ContinuousRoundedRectangle
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.HazeTint
-import dev.lackluster.hyperx.compose.base.AlertDialog
-import dev.lackluster.hyperx.compose.base.AlertDialogMode
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.base.HazeScaffold
-import dev.lackluster.hyperx.compose.base.TabRow
-import dev.lackluster.hyperx.compose.preference.EditTextDialog
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
+import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.navigation.Navigator
+import dev.lackluster.hyperx.ui.dialog.AlertDialog
+import dev.lackluster.hyperx.ui.dialog.AlertDialogMode
+import dev.lackluster.hyperx.ui.dialog.EditTextDialog
+import dev.lackluster.hyperx.ui.layout.HyperXScaffold
+import dev.lackluster.hyperx.ui.layout.LocalLayoutPadding
+import dev.lackluster.hyperx.ui.layout.TabRow
+import dev.lackluster.hyperx.ui.preference.DropDownEntry
+import dev.lackluster.hyperx.ui.preference.DropDownPreference
+import dev.lackluster.hyperx.ui.preference.ItemPosition
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
+import dev.lackluster.hyperx.ui.preference.TextPreference
 import kotlinx.coroutines.launch
 import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
@@ -126,12 +127,10 @@ import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
-import top.yukonga.miuix.kmp.extra.SpinnerEntry
-import top.yukonga.miuix.kmp.extra.SuperArrow
-import top.yukonga.miuix.kmp.extra.SuperSpinner
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.miuixShape
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import kotlin.math.pow
 import kotlin.math.round
@@ -140,21 +139,14 @@ import kotlin.math.round
  * 手动选择背景颜色界面
  */
 @Composable
-fun ColorPickerPage(
-    navController: NavController,
-    adjustPadding: PaddingValues,
-    pkgName: String?,
-    mode: BasePageDefaults.Mode
-) {
+fun ColorPickerPage(pkgName: String) {
+    val navigator = LocalNavigator.current
+
     // 模块 App 透明度配置
     val blurEnabled = MainActivity.blurEnabled
 
     // 顶部栏模糊状态
     val scrollBehavior = MiuixScrollBehavior(rememberTopAppBarState())
-    val hazeTint = MiuixTheme.colorScheme.surface.copy(
-        if (scrollBehavior.state.collapsedFraction <= 0f) 1f
-        else lerp(1f, 0.67f, (scrollBehavior.state.collapsedFraction))
-    )
     val listState = rememberLazyListState()
     // dialog 的显示状态
     val modifiedDialogVisibility = remember { mutableStateOf(false) }
@@ -169,28 +161,22 @@ fun ColorPickerPage(
         hsvColorState = remember { defaultColor.toHSVColorList().toMutableStateList() }
     )
 
-    // 显示内容脚手架
-    HazeScaffold(
+    // 显示内容脚手架（模糊由布局内部处理）
+    HyperXScaffold(
         modifier = Modifier.fillMaxSize(),
         blurTopBar = blurEnabled.value,
         blurBottomBar = blurEnabled.value,
-        hazeStyle = HazeStyle(
-            blurRadius = 25.dp,
-            noiseFactor = 0f,
-            backgroundColor = MiuixTheme.colorScheme.surface,
-            tint = HazeTint(hazeTint)
-        ),
-        adjustPadding = adjustPadding,
+        topBarBlurFractionProvider = { scrollBehavior.state.overlappedFraction },
+        layoutPadding = LocalLayoutPadding.current,
         topBar = {
             TopBar(
                 paddingValues = it,
-                mode = mode,
                 appName = appColorConfig.appName,
                 scrollBehavior = scrollBehavior,
                 blurEnabled = blurEnabled,
                 onBack = {
                     onBack(
-                        navController = navController,
+                        navigator = navigator,
                         appColorConfig = appColorConfig,
                         currentDarkMode = currentDarkMode,
                         pickedColor = pickedColor,
@@ -233,7 +219,7 @@ fun ColorPickerPage(
 
     // 注册界面上的 Dialog
     AlertDialogs(
-        navController = navController,
+        navigator = navigator,
         modifiedDialogVisibility = modifiedDialogVisibility,
         dropdownDialogVisibility = dropdownDialogVisibility,
         pickedColor = pickedColor,
@@ -248,21 +234,12 @@ fun ColorPickerPage(
 @Composable
 private fun TopBar(
     paddingValues: PaddingValues,
-    mode: BasePageDefaults.Mode,
     appName: String,
     scrollBehavior: ScrollBehavior,
     blurEnabled: MutableState<Boolean>,
     onBack: () -> Unit,
 ) {
     val layoutDirection = LocalLayoutDirection.current
-    val systemBarInsets =
-        WindowInsets.systemBars.add(WindowInsets.displayCutout).only(WindowInsetsSides.Horizontal).asPaddingValues()
-    val navigationIconPadding = PaddingValues.Absolute(
-        left = if (mode != BasePageDefaults.Mode.SPLIT_RIGHT)
-            systemBarInsets.calculateLeftPadding(layoutDirection)
-        else
-            0.dp
-    )
     TopAppBar(
         color = if (blurEnabled.value) Color.Transparent else MiuixTheme.colorScheme.surface,
         title = appName,
@@ -270,7 +247,6 @@ private fun TopBar(
         navigationIcon = {
             IconButton(
                 modifier = Modifier
-                    .padding(navigationIconPadding)
                     .padding(start = 21.dp)
                     .size(40.dp),
                 onClick = onBack
@@ -284,7 +260,9 @@ private fun TopBar(
             }
         },
         defaultWindowInsetsPadding = false,
-        horizontalPadding = 28.dp + paddingValues.calculateLeftPadding(LocalLayoutDirection.current)
+        titlePadding = 28.dp + paddingValues.calculateStartPadding(layoutDirection),
+        navigationIconPadding = paddingValues.calculateStartPadding(layoutDirection),
+        actionIconPadding = paddingValues.calculateEndPadding(layoutDirection)
     )
 }
 
@@ -338,8 +316,8 @@ private fun MainContent(
         state = pagerState
     ) { page ->
         when (page) {
-            0 -> PreferenceGroup(last = true) { RGBPreference(pickedColor) }
-            1 -> PreferenceGroup(last = true) { HSVPreference(pickedColor) }
+            0 -> PreferenceGroup(position = ItemPosition.Last) { RGBPreference(pickedColor) }
+            1 -> PreferenceGroup(position = ItemPosition.Last) { HSVPreference(pickedColor) }
         }
     }
 }
@@ -516,41 +494,40 @@ private fun InputColor(
     dropdownDialogVisibility: MutableState<Boolean>
 ) {
     // 颜色生效模式
-    SuperSpinner(
+    DropDownPreference(
         title = stringResource(R.string.target_color_mode),
         summary = stringResource(R.string.target_color_mode_tips),
-        items = listOf(
-            SpinnerEntry(title = stringResource(R.string.target_color_mode_light)),
-            SpinnerEntry(title = stringResource(R.string.target_color_mode_dark))
+        value = if (darkMode.value) 1 else 0,
+        entries = listOf(
+            DropDownEntry(0, stringResource(R.string.target_color_mode_light)),
+            DropDownEntry(1, stringResource(R.string.target_color_mode_dark))
         ),
-        selectedIndex = if (darkMode.value) 1 else 0,
         showValue = true,
-    ) {
-        if (appColorConfig.getDefaultBGColor(darkMode.value) != pickedColor.colorInt) {
-            dropdownDialogVisibility.value = true
-        } else {
-            darkMode.value = !darkMode.value
-            pickedColor.colorInt = appColorConfig.getDefaultBGColor(darkMode.value)
+        onValueChange = {
+            if (appColorConfig.getDefaultBGColor(darkMode.value) != pickedColor.colorInt) {
+                dropdownDialogVisibility.value = true
+            } else {
+                darkMode.value = !darkMode.value
+                pickedColor.colorInt = appColorConfig.getDefaultBGColor(darkMode.value)
+            }
         }
-    }
+    )
 
     // 手动输入颜色
     val dialogVisibility = remember { mutableStateOf(false) }
     val context = LocalContext.current
-    SuperArrow(
+    TextPreference(
         title = stringResource(R.string.manual_input),
-        startAction = {
-            Text("#" + "%08X".format(pickedColor.colorInt).substring(2))
-        },
-        insideMargin = PaddingValues(16.dp),
+        value = "#" + "%08X".format(pickedColor.colorInt).substring(2),
         onClick = { dialogVisibility.value = true }
     )
     EditTextDialog(
-        visibility = dialogVisibility,
+        visible = dialogVisibility.value,
+        onDismissRequest = { dialogVisibility.value = false },
         title = stringResource(R.string.manual_input),
         message = stringResource(R.string.manual_input_hint),
-        value = "%08X".format(pickedColor.colorInt).substring(2),
-        onInputConfirm = { newString ->
+        initialText = "%08X".format(pickedColor.colorInt).substring(2),
+        onConfirm = { newString ->
             val trimmedString = newString.replace("#", "")
             try {
                 pickedColor.colorInt = "#$trimmedString".toColorInt()
@@ -786,7 +763,7 @@ private fun BottomBar(
  */
 @Composable
 private fun AlertDialogs(
-    navController: NavController,
+    navigator: Navigator,
     modifiedDialogVisibility: MutableState<Boolean>,
     dropdownDialogVisibility: MutableState<Boolean>,
     pickedColor: PickedColor,
@@ -803,7 +780,7 @@ private fun AlertDialogs(
         positiveText = stringResource(R.string.button_reedit),
         onNegativeButton = {
             modifiedDialogVisibility.value = false
-            navController.popBackStack()
+            navigator.pop()
         }
     )
     AlertDialog(
@@ -922,7 +899,7 @@ private fun HueSeekBar(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(28.dp)
-                    .clip(ContinuousRoundedRectangle(28.dp))
+                    .clip(miuixShape(28.dp))
                     .drawBehind {
                         val barHeight = size.height
                         val barWidth = size.width
@@ -1001,7 +978,7 @@ private fun FloatColorSeekBar(
  * 界面返回行为
  */
 private fun onBack(
-    navController: NavController,
+    navigator: Navigator,
     appColorConfig: AppColorConfig,
     pickedColor: PickedColor,
     currentDarkMode: MutableState<Boolean>,
@@ -1010,7 +987,7 @@ private fun onBack(
     if (appColorConfig.getDefaultBGColor(currentDarkMode.value) != pickedColor.colorInt) {
         modifiedDialogVisibility.value = true
     } else {
-        navController.popBackStack()
+        navigator.pop()
     }
 }
 

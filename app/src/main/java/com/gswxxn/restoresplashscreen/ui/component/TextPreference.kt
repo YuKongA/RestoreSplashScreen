@@ -1,16 +1,12 @@
 package com.gswxxn.restoresplashscreen.ui.component
 
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
 import com.highcapable.yukihookapi.YukiHookAPI
-import dev.lackluster.hyperx.compose.base.DrawableResIcon
-import dev.lackluster.hyperx.compose.base.ImageIcon
-import top.yukonga.miuix.kmp.extra.SuperArrow
+import dev.lackluster.hyperx.ui.component.ImageIcon
+import dev.lackluster.hyperx.ui.preference.TextPreference as HyperXTextPreference
 
 /**
  * TextPreference 在用户点击后先判断模块是否激活, 如未激活则发出 toast
@@ -25,22 +21,17 @@ fun TextPreference(
     onClick: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
-    SuperArrow(
+    HyperXTextPreference(
         title = title,
+        icon = icon,
         summary = summary,
-        startAction = { icon?.let { DrawableResIcon(it) } },
-        endActions = {
-            if (!value.isNullOrEmpty()) {
-                Text(value)
-            }
-        },
-        insideMargin = PaddingValues((icon?.getHorizontalPadding() ?: 16.dp), 16.dp, 16.dp, 16.dp),
+        value = value,
         onClick = {
             if (!YukiHookAPI.Status.isXposedModuleActive && !ignoreModuleActiveStatus) {
                 context.toast(R.string.make_sure_active)
-                return@SuperArrow
+            } else {
+                onClick?.invoke()
             }
-            onClick?.invoke()
         }
     )
 }

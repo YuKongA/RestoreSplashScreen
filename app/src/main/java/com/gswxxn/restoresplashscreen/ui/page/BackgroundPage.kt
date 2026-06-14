@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
@@ -14,11 +13,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.navigation.NavController
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.DataConst
-import com.gswxxn.restoresplashscreen.data.Pages
-import com.gswxxn.restoresplashscreen.ui.MainActivity
+import com.gswxxn.restoresplashscreen.data.Route
 import com.gswxxn.restoresplashscreen.ui.component.DropDownPreference
 import com.gswxxn.restoresplashscreen.ui.component.HeaderCard
 import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
@@ -28,28 +25,26 @@ import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.utils.YukiHelper.isMIUI
 import com.highcapable.yukihookapi.hook.factory.hasClass
 import com.highcapable.yukihookapi.hook.factory.prefs
-import dev.lackluster.hyperx.compose.base.BasePage
-import dev.lackluster.hyperx.compose.base.BasePageDefaults
-import dev.lackluster.hyperx.compose.navigation.navigateTo
-import dev.lackluster.hyperx.compose.preference.PreferenceGroup
-import top.yukonga.miuix.kmp.extra.SpinnerEntry
+import dev.lackluster.hyperx.navigation.LocalNavigator
+import dev.lackluster.hyperx.navigation.Navigator
+import dev.lackluster.hyperx.ui.layout.HyperXPage
+import dev.lackluster.hyperx.ui.preference.DropDownEntry
+import dev.lackluster.hyperx.ui.preference.ItemPosition
+import dev.lackluster.hyperx.ui.preference.PreferenceGroup
 
 /**
  * 背景 界面
  */
 @Composable
-fun BackgroundPage(navController: NavController, adjustPadding: PaddingValues, mode: BasePageDefaults.Mode) {
-    BasePage(
-        navController = navController,
-        adjustPadding = adjustPadding,
+fun BackgroundPage() {
+    val navigator = LocalNavigator.current
+    HyperXPage(
         title = stringResource(R.string.background_settings),
-        blurEnabled = MainActivity.blurEnabled,
-        mode = mode
     ) {
         item {
             HeaderCard(imageResID = R.drawable.demo_background, title = "BACKGROUND")
 
-            SettingItems(navController)
+            SettingItems(navigator)
         }
     }
 }
@@ -58,16 +53,16 @@ fun BackgroundPage(navController: NavController, adjustPadding: PaddingValues, m
  * 分组设置
  */
 @Composable
-private fun SettingItems(navController: NavController) {
+private fun SettingItems(navigator: Navigator) {
     val prefs = LocalContext.current.prefs()
     val ignoreDarkMode = remember { mutableStateOf(prefs.get(DataConst.IGNORE_DARK_MODE)) }
 
-    PreferenceGroup(last = !isMIUI) {
-        GeneralSettingItems(navController = navController, ignoreDarkMode = ignoreDarkMode)
+    PreferenceGroup(position = if (isMIUI) ItemPosition.Middle else ItemPosition.Last) {
+        GeneralSettingItems(navigator = navigator, ignoreDarkMode = ignoreDarkMode)
     }
 
     if (isMIUI) {
-        PreferenceGroup(last = true) {
+        PreferenceGroup(position = ItemPosition.Last) {
             MIUISettingsGroup(ignoreDarkMode = ignoreDarkMode)
         }
     }
@@ -78,7 +73,7 @@ private fun SettingItems(navController: NavController) {
  */
 @Composable
 private fun GeneralSettingItems(
-    navController: NavController,
+    navigator: Navigator,
     ignoreDarkMode: MutableState<Boolean>
 ) {
     val prefs = LocalContext.current.prefs()
@@ -92,7 +87,7 @@ private fun GeneralSettingItems(
     // 替换背景颜色
     DropDownPreference(
         title = stringResource(R.string.change_bg_color),
-        entries = ChangeBGColorTypes.entries.map { SpinnerEntry(title = stringResource(it.stringID)) },
+        entries = ChangeBGColorTypes.entries.mapIndexed { index, type -> DropDownEntry(value = index, title = stringResource(type.stringID)) },
         prefsData = DataConst.CHANG_BG_COLOR_TYPE,
         onSelectedIndexChange = { changeBGColorType.intValue = it }
     )
@@ -106,7 +101,7 @@ private fun GeneralSettingItems(
         DropDownPreference(
             title = stringResource(R.string.color_mode),
             summary = if (isMIUI) stringResource(R.string.color_mode_tips) else null,
-            entries = BGColorModes.entries.map { SpinnerEntry(title = stringResource(it.stringID)) },
+            entries = BGColorModes.entries.mapIndexed { index, mode -> DropDownEntry(value = index, title = stringResource(mode.stringID)) },
             prefsData = DataConst.BG_COLOR_MODE,
             selectedIndex = colorMode
         ) {
@@ -125,7 +120,7 @@ private fun GeneralSettingItems(
         TextPreference(
             title = stringResource(R.string.set_custom_bg_color)
         ) {
-            navController.navigateTo("${Pages.CONFIG_COLOR_PICKER}?PkgName=${""}")
+            navigator.push(Route.ColorPicker(""))
         }
     }
     AnimatedVisibility(
@@ -141,13 +136,13 @@ private fun GeneralSettingItems(
             )
             // 配置应用列表
             TextPreference(title = stringResource(R.string.change_bg_color_list)) {
-                navController.navigateTo(Pages.CONFIG_BACKGROUND_EXCEPT)
+                navigator.push(Route.BackgroundExcept)
             }
         }
     }
     // 单独配置应用背景颜色
     TextPreference(title = stringResource(R.string.configure_bg_colors_individually)) {
-        navController.navigateTo(Pages.CONFIG_BACKGROUND_INDIVIDUALLY)
+        navigator.push(Route.BgIndividual)
     }
 }
 
