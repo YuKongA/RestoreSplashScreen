@@ -22,6 +22,7 @@ import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentA
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentComponentName
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getDevPrefs
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
@@ -311,7 +312,7 @@ object IconHookHandler : BaseHookHandler() {
 
     /** 使用 MIUI 大图标 */
     private fun getMIUILargeIcon(): Drawable? {
-        if (prefs.get(Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON) && miuiIcons.hasLargeIcon(currentPackageName)) {
+        if (isMIUI && prefs.get(Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON) && miuiIcons.hasLargeIcon(currentPackageName)) {
             printLog("getIcon(): use MIUI Large Icon")
             return miuiIcons.getLargeIconDrawable(currentPackageName)?.let {
                 val largeIconSize = miuiIcons.getLargeIconSize(currentPackageName)
@@ -362,7 +363,7 @@ object IconHookHandler : BaseHookHandler() {
                 currentPackageName == "com.android.contacts" && currentComponentName.isNotEmpty() -> getActivityIconOrApp(pm)
 
                 // 2、在 MIUI/HyperOS 上尝试获取完美图标
-                miuiIcons.isSupportMIUIModeIcon -> miuiIcons.getFancyIconDrawable(currentPackageName, appUserId, currentApplicationInfo)
+                isMIUI && miuiIcons.isSupportMIUIModeIcon -> miuiIcons.getFancyIconDrawable(currentPackageName, appUserId, currentApplicationInfo)
 
                 // 3、如果存在 ComponentName 则优先使用 ComponentName 获取图标
                 currentComponentName.isNotEmpty() -> getActivityIconOrApp(pm)

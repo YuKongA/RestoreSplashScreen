@@ -10,7 +10,6 @@ import android.provider.Settings
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.HookManager
 import com.gswxxn.restoresplashscreen.hook.systemui.IconHookHandler.getActivityIconOrApp
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
 import com.gswxxn.restoresplashscreen.hook.utils.toTyped
@@ -74,11 +73,11 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
     }
 
     private val drawableUtilsClazz by lazy {
-        "com.miui.utils.DrawableUtils".toClass(loader = classLoader)
+        "com.miui.utils.DrawableUtils".toClassOrNull(loader = classLoader)
     }
 
     private val getFancyChildOrSelf by lazy {
-        drawableUtilsClazz.resolve().optional().firstMethodOrNull {
+        drawableUtilsClazz?.resolve()?.optional()?.firstMethodOrNull {
             name = "getFancyChildOrSelf"
             parameterCount = 2
             parameters(Drawable::class, Boolean::class)
@@ -87,7 +86,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
 
     /** 当前是否启用 MIUI 完美图标 */
     val isSupportMIUIModeIcon by lazy {
-        isMIUI && Settings.System.getInt(context.contentResolver, "key_miui_mod_icon_enable", 0) == 1 || getFancyChildOrSelf != null
+        Settings.System.getInt(context.contentResolver, "key_miui_mod_icon_enable", 0) == 1 || getFancyChildOrSelf != null
     }
 
     init {
