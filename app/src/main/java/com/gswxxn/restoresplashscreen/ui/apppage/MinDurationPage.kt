@@ -349,7 +349,6 @@ fun MinDurationPage() {
             }
         },
         blurTopBar = blurEnabled,
-        topBarBlurFractionProvider = { scrollBehavior.state.overlappedFraction },
         blurBottomBar = blurEnabled,
         blurTintAlpha = blurTintAlpha,
     ) { paddingValues ->

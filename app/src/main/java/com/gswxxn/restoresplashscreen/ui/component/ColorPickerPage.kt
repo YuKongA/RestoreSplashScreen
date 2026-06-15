@@ -165,7 +165,6 @@ fun ColorPickerPage(pkgName: String) {
         modifier = Modifier.fillMaxSize(),
         blurTopBar = blurEnabled.value,
         blurBottomBar = blurEnabled.value,
-        topBarBlurFractionProvider = { scrollBehavior.state.overlappedFraction },
         layoutPadding = LocalLayoutPadding.current,
         topBar = {
             TopBar(

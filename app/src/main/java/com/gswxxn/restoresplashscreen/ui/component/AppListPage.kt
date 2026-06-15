@@ -400,7 +400,6 @@ fun AppListPage(
             }
         },
         blurTopBar = blurEnabled,
-        topBarBlurFractionProvider = { scrollBehavior.state.overlappedFraction },
         blurBottomBar = blurEnabled,
         blurTintAlpha = blurTintAlpha,
     ) { paddingValues ->
