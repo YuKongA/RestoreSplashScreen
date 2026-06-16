@@ -11,9 +11,7 @@ import android.graphics.Shader
 import android.graphics.drawable.AdaptiveIconDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
-import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
-import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.gswxxn.restoresplashscreen.hook.utils.ReflectCache
 
 /**
  * 透明背景的 AdaptiveIconDrawable
@@ -22,36 +20,18 @@ class TransparentAdaptiveIconDrawable(
     foregroundDrawable: Drawable
 ) : AdaptiveIconDrawable(ColorDrawable(Color.TRANSPARENT), foregroundDrawable) {
     private var mLayersShader: Shader?
-        get() = this.javaClass.resolve().firstField {
-            name = "mLayersShader"
-            superclass()
-        }.getValueFrom(this)
+        get() = ReflectCache.getField(this, "mLayersShader")
         set(value) {
-            this.javaClass.resolve().firstField {
-                name = "mLayersShader"
-                superclass()
-            }.setValueTo(this, value)
+            ReflectCache.setField(this, "mLayersShader", value)
         }
     private val mCanvas: Canvas
-        get() = this.javaClass.resolve().firstField {
-            name = "mCanvas"
-            superclass()
-        }.getValueFrom<TransparentAdaptiveIconDrawable, Canvas>(this)!!
+        get() = ReflectCache.getField<Canvas>(this, "mCanvas")!!
     private val mLayersBitmap: Bitmap?
-        get() = this.javaClass.resolve().firstField {
-            name = "mLayersBitmap"
-            superclass()
-        }.getValueFrom(this)
+        get() = ReflectCache.getField(this, "mLayersBitmap")
     private val mPaint: Paint
-        get() = this.javaClass.resolve().firstField {
-            name = "mPaint"
-            superclass()
-        }.getValueFrom<TransparentAdaptiveIconDrawable, Paint>(this)!!
+        get() = ReflectCache.getField<Paint>(this, "mPaint")!!
     private val mMaskScaleOnly: Path?
-        get() = this.javaClass.resolve().firstField {
-            name = "mMaskScaleOnly"
-            superclass()
-        }.getValueFrom(this)
+        get() = ReflectCache.getField(this, "mMaskScaleOnly")
 
     /**
      * 继承修改自 AdaptiveIconDrawable

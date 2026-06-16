@@ -147,7 +147,7 @@ private fun GeneralSettingItems(
 }
 
 /**
- * 仅在小米设备上生效的设置项
+ * 仅在 HyperOS 上生效的设置项
  */
 @Composable
 private fun MIUISettingsGroup(ignoreDarkMode: MutableState<Boolean>) {

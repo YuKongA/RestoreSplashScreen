@@ -5,7 +5,6 @@ import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.utils.RemotePreferences.get
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
 import com.gswxxn.restoresplashscreen.utils.MLog
-import com.highcapable.kavaref.KavaRef.Companion.resolve
 import dev.lackluster.hyperx.ui.preference.core.PreferenceKey
 
 /**
@@ -27,12 +26,7 @@ object HookExt {
      * 需要获取 Field 的实例
      * @param fieldName Field 名称
      */
-    @Suppress("UNCHECKED_CAST")
-    fun <T> Any.getField(fieldName: String): T? =
-        this.javaClass.resolve().optional().firstFieldOrNull {
-            name = fieldName
-            superclass()
-        }?.copy()?.of(this)?.get() as? T
+    fun <T> Any.getField(fieldName: String): T? = ReflectCache.getField(this, fieldName)
 
     /**
      * 打印日志

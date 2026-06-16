@@ -8,7 +8,7 @@ import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getMapPrefs
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
-import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
+import com.gswxxn.restoresplashscreen.hook.utils.ReflectCache
 import com.gswxxn.restoresplashscreen.utils.MLog
 import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.kavaref.extension.toClass
@@ -58,13 +58,10 @@ object GenerateHookHandler : BaseHookHandler() {
                 activityInfo = args[1] as ActivityInfo
             else {
                 val arg = args[1]!!
-                activityInfo = arg.javaClass.resolve().firstField { name = "targetActivityInfo" }.getValueFrom<Any, ActivityInfo>(arg)
+                activityInfo = ReflectCache.getField<ActivityInfo>(arg, "targetActivityInfo")
                 if (activityInfo == null) {
-                    val taskInfo = arg.javaClass.resolve().firstField { name = "taskInfo" }.getValueFrom<Any, Any>(arg)!!
-                    activityInfo = taskInfo.javaClass.resolve().firstField {
-                        name = "topActivityInfo"
-                        superclass()
-                    }.getValueFrom<Any, ActivityInfo>(taskInfo)!!
+                    val taskInfo = ReflectCache.getField<Any>(arg, "taskInfo")!!
+                    activityInfo = ReflectCache.getField<ActivityInfo>(taskInfo, "topActivityInfo")!!
                 }
             }
 

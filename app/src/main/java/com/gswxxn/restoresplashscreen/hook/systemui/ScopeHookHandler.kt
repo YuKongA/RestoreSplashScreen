@@ -10,10 +10,7 @@ import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.exceptCu
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.isHooking
 import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
-import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
-import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
-import com.gswxxn.restoresplashscreen.hook.utils.toTyped
-import com.highcapable.kavaref.KavaRef.Companion.resolve
+import com.gswxxn.restoresplashscreen.hook.utils.ReflectCache
 
 /**
  * 此对象用于处理作用域 Hook
@@ -48,23 +45,19 @@ object ScopeHookHandler : BaseHookHandler() {
          */
         if (isHyperOS) {
             SystemUIHooker.Members.getBGColorFromCache.addAfterHook {
-                val mTmpAttrs = instance!!.javaClass.resolve().firstField { name = "mTmpAttrs" }.getValueFrom<Any, Any>(instance)!!
-                mTmpAttrs.javaClass.resolve().firstField { name = "mIconBgColor" }.setValueTo(mTmpAttrs, 1)
+                val mTmpAttrs = ReflectCache.getField<Any>(instance!!, "mTmpAttrs")!!
+                ReflectCache.setField(mTmpAttrs, "mIconBgColor", 1)
                 printLog { "getBGColorFromCache(): Set mIconBgColor to 1" }
             }
 
             // 重置因实现自定义作用域而影响到的 mTmpAttrs
             SystemUIHooker.Members.startingWindowViewBuilderConstructor.addAfterHook {
                 val mSplashscreenContentDrawer =
-                    instance!!.javaClass.resolve().firstField { name = "this$0" }.getValueFrom<Any, Any>(instance)!!
-                val mTmpAttrs = mSplashscreenContentDrawer.javaClass.resolve().firstField { name = "mTmpAttrs" }
-                    .getValueFrom<Any, Any>(mSplashscreenContentDrawer)!!
+                    ReflectCache.getField<Any>(instance!!, "this$0")!!
+                val mTmpAttrs = ReflectCache.getField<Any>(mSplashscreenContentDrawer, "mTmpAttrs")!!
                 val context = args.first { it is Context }
 
-                mSplashscreenContentDrawer.javaClass.resolve().firstMethod {
-                    name = "getWindowAttrs"
-                    parameterCount = 2
-                }.toTyped<Any>().invoke(mSplashscreenContentDrawer, context, mTmpAttrs)
+                ReflectCache.invokeMethod<Any>(mSplashscreenContentDrawer, "getWindowAttrs", context, mTmpAttrs)
             }
         }
     }

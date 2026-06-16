@@ -10,13 +10,12 @@ import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentP
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getMapPrefs
 import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
-import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
+import com.gswxxn.restoresplashscreen.hook.utils.ReflectCache
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
 import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.isDarkMode
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils
 import com.gswxxn.restoresplashscreen.wrapper.SplashScreenViewBuilderWrapper
-import com.highcapable.kavaref.KavaRef.Companion.resolve
 
 /**
  * 此对象用于处理 背景 Hook
@@ -34,7 +33,7 @@ object BgHookHandler : BaseHookHandler() {
     /** 开始 Hook */
     override fun onHook() {
         SystemUIHooker.Members.getBGColorFromCache.addAfterHook {
-            mTmpAttrsInstance = instance!!.javaClass.resolve().firstField { name = "mTmpAttrs" }.getValueFrom<Any, Any>(instance)
+            mTmpAttrsInstance = ReflectCache.getField<Any>(instance!!, "mTmpAttrs")
         }
         SystemUIHooker.Members.build_SplashScreenViewBuilder.addBeforeHook {
             val builder = SplashScreenViewBuilderWrapper.getInstance(instance!!)
@@ -62,8 +61,7 @@ object BgHookHandler : BaseHookHandler() {
         val skipAppWithBgColor = bgColorType != 0 &&
                 currentPackageName !in individualBgColorAppMap.keys &&
                 prefs.get(Preferences.Background.SKIP_APP_WITH_BG_COLOR) &&
-                (mTmpAttrsInstance!!.javaClass.resolve().firstField { name = "mWindowBgColor" }.getValueFrom<Any, Int>(mTmpAttrsInstance)
-                    ?: 0) != 0
+                (ReflectCache.getField<Int>(mTmpAttrsInstance!!, "mWindowBgColor") ?: 0) != 0
 
         if (skipAppWithBgColor) {
             printLog { "SplashScreenViewBuilder(): skip set bg color cuz app has been set bg color" }
@@ -78,9 +76,7 @@ object BgHookHandler : BaseHookHandler() {
                 // 从图标取色
                 ChangeBGColorTypes.FromIcon.ordinal -> {
                     printLog { "SplashScreenViewBuilder(): get adaptive background color" }
-                    IconHookHandler.currentIconDominantColor ?: mTmpAttrsInstance!!.javaClass.resolve()
-                        .firstField { name = "mSplashScreenIcon" }
-                        .getValueFrom<Any, Drawable>(mTmpAttrsInstance)?.let { drawable ->
+                    IconHookHandler.currentIconDominantColor ?: ReflectCache.getField<Drawable>(mTmpAttrsInstance!!, "mSplashScreenIcon")?.let { drawable ->
                             val bitmap = GraphicUtils.drawable2Bitmap(drawable, 100)
                             GraphicUtils.getBgColor(
                                 bitmap,
