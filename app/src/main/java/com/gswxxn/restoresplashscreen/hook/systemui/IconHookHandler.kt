@@ -30,7 +30,6 @@ import com.gswxxn.restoresplashscreen.hook.utils.toTyped
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
 import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.ui.page.data.ShrinkIconType
-import com.gswxxn.restoresplashscreen.utils.CommonUtils.dp2px
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.isDarkMode
 import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils
@@ -161,30 +160,33 @@ object IconHookHandler : BaseHookHandler() {
                 }
             }
 
-            // 绘制圆角（如果使用小米大图标, 则不绘制圆角）
-            if (!prefs.get(Preferences.Display.ENABLE_DRAW_ROUND_CORNER) || currentUseBigHyperOSLagerIcon != true) {
-                return@addAfterHook
-            }
-            val iconSize = ReflectCache.getField<Int>(instance!!, "mIconSize") ?: 0
-            // 如果没有图标，则不绘制圆角
-            if (iconSize == 0) return@addAfterHook
-            val iconDrawable = ReflectCache.getField<Drawable>(instance!!, "mIconDrawable")
-                ?: return@addAfterHook
-            // 不为动态图标绘制圆角
-            if ($$"android.window.SplashScreenView$IconAnimateListener".toClass(loader = appClassLoader) in iconDrawable.javaClass.interfaces) {
-                return@addAfterHook
-            }
-            // 提前计算圆角参数
-            val border = dp2px(appContext!!, 1.5f)
-            val cornerRadius = iconSize.toFloat() * getDevPrefs(Preferences.Dev.DEV_ICON_ROUND_CORNER_RATE) / 100
-            iconView.outlineProvider = object : ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: Outline) {
-                    outline.setRoundRect(border, border, view.width - border, view.height - border, cornerRadius)
+            // 绘制图标圆角
+            // 不为小米大图标绘制圆角
+            if (prefs.get(Preferences.Display.ENABLE_DRAW_ROUND_CORNER) && currentUseBigHyperOSLagerIcon != true) {
+                val iconDrawable = ReflectCache.getField<Drawable>(instance!!, "mIconDrawable")
+                when {
+                    // 没有图标时不绘制圆角
+                    iconDrawable == null ->
+                        printLog { "build_SplashScreenViewBuilder(): skip round corner, no icon drawable" }
+                    // 不为动态图标绘制圆角
+                    $$"android.window.SplashScreenView$IconAnimateListener".toClass(loader = appClassLoader) in iconDrawable.javaClass.interfaces ->
+                        printLog { "build_SplashScreenViewBuilder(): skip round corner for animated icon" }
+
+                    else -> {
+                        // 通过 View 轮廓剪裁绘制圆角
+                        val cornerRate = getDevPrefs(Preferences.Dev.DEV_ICON_ROUND_CORNER_RATE)
+                        iconView.outlineProvider = object : ViewOutlineProvider() {
+                            override fun getOutline(view: View, outline: Outline) {
+                                val size = minOf(view.width, view.height)
+                                if (size <= 0) return
+                                outline.setRoundRect(0, 0, view.width, view.height, size * cornerRate / 100f)
+                            }
+                        }
+                        iconView.clipToOutline = true
+                        printLog { "build_SplashScreenViewBuilder(): draw icon round corner" }
+                    }
                 }
             }
-            // 启用轮廓剪裁
-            iconView.clipToOutline = true
-            printLog { "build_SplashScreenViewBuilder(): draw icon round corner" }
         }
 
         // 标记 makeSplashScreenContentView 的同步执行区间

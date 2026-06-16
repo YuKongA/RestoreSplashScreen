@@ -75,13 +75,13 @@
     <string name="shrink_all_icon">缩小全部图标</string>
     <string name="replace_icon">替换图标获取方式</string>
     <string name="add_icon_blur_bg">为缩小的图标添加模糊背景</string>
-    <string name="replace_icon_tips">开启此选项后，Splash Screen 的图标可以跟随主题设定。但是通常获取到的主题图标分辨率较低，经过放大后图标可能会比较模糊。</string>
+    <string name="replace_icon_tips">开启此选项后，Splash Screen 的图标可以跟随主题设定。多数主题图标分辨率较低，经过放大后图标会比较模糊。</string>
     <string name="use_miui_large_icon">使用小米大图标</string>
     <string name="remove_icon_stroke">移除小米图标描边</string>
     <string name="use_icon_pack">使用图标包</string>
     <string name="icon_pack_is_removed">图标包被删除, 请重新选择</string>
     <string name="default_style">忽略应用主动设置的图标</string>
-    <string name="default_style_tips">开启此选项并后，选中的应用即使主动适配 Splash Screen, 也按未设置图标处理。开启此选项也可以解决以下问题：\n1、使用第三方主题会出现图标方角问题。\n2、部分应用没有将图标背景设置成透明导致图标方角问题。</string>
+    <string name="default_style_tips">开启此选项后，选中的应用即使主动适配 Splash Screen, 也按未设置图标处理。开启此选项也可以解决以下问题：\n1、使用第三方主题会出现图标方角问题。\n2、部分应用没有将图标背景设置成透明导致图标方角问题。</string>
     <string name="hide_splash_screen_icon">不显示图标</string>
     <string name="default_style_list">配置应用列表</string>
     <string name="remove_branding_image">移除底部图片</string>
@@ -102,7 +102,7 @@
     <string name="change_bg_color_list">配置排除列表</string>
     <string name="configure_bg_colors_individually">单独配置应用背景颜色</string>
     <string name="ignore_dark_mode">忽略小米强制深色模式</string>
-    <string name="ignore_dark_mode_tips">在深色模式下，小米会强制将启动遮罩背景替换为固定颜色。开启此选项后，将解除此限制。</string>
+    <string name="ignore_dark_mode_tips">在深色模式下，小米会强制将启动遮罩背景替换为固定颜色。开启此选项后将解除此限制。</string>
     <string name="remove_bg_drawable">移除截图背景</string>
     <string name="remove_bg_drawable_tips">如果 Splash Screen 的背景为应用内截图，可开启此选项移除。</string>
     <string name="force_show_splash_screen">强制显示遮罩</string>
@@ -113,9 +113,9 @@
     <string name="force_enable_splash_screen">强制开启启动遮罩</string>
     <string name="force_enable_splash_screen_tips">如果模块显示成功激活但是不起作用，请尝试开启此选项。\n如果模块可以正常运行，请「不要」开启此选项。\n开启此选项可能导致的问题：\n1、可能会在不需要显示 Splash Screen 的场景显示启动遮罩。\n2、可能导致应用主动设置的 Splash Screen 背景图片无法显示。</string>
     <string name="hot_start_compatible">将启动遮罩适用于热启动</string>
-    <string name="hot_start_compatible_tips">注意：开启此选项需要在 LSPosed 管理器的作用域中勾选「系统框架」并重启手机；此选项需要与「强制开启启动遮罩」同时开启。</string>
+    <string name="hot_start_compatible_tips">此选项需要与「强制开启启动遮罩」同时开启。注意：开启此选项需要在 LSPosed 管理器的作用域中勾选「系统框架」并重启手机。</string>
     <string name="disable_splash_screen">彻底关闭 Splash Screen</string>
-    <string name="disable_splash_screen_tips">注意：开启此选项需要在 LSPosed 管理器的作用域中勾选「系统框架」并重启手机；开启此选项后，模块内其他设置将成为摆设，因此没必要在作用域中勾选「系统界面」。</string>
+    <string name="disable_splash_screen_tips">开启此选项后，模块内其他设置将成为摆设，因此没必要在作用域中勾选「系统界面」。注意：开启此选项需要在 LSPosed 管理器的作用域中勾选「系统框架」并重启手机。</string>
 
     <!--应用配置界面-->
     <string name="custom_scope_title">作用域列表</string>

@@ -131,7 +131,7 @@ private fun CommonSettingsGroup() {
     )
 
     if (DeviceUtils.isHyperOS) {
-        // 移除图标描边
+        // 移除小米图标描边
         SwitchPreference(
             title = stringResource(R.string.remove_icon_stroke),
             key = Preferences.Icon.ENABLE_REMOVE_ICON_STROKE
