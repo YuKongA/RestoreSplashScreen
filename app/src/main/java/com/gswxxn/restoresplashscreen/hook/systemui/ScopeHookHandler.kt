@@ -35,7 +35,7 @@ object ScopeHookHandler : BaseHookHandler() {
             if (isReplaceToEmptySplashScreen && exceptCurrentApp) {
                 args(args.indexOfFirst { it is Int }).set(StartingWindowInfo.STARTING_WINDOW_TYPE_LEGACY_SPLASH_SCREEN)
             }
-            printLog("makeSplashScreenContentView(): ${if (isReplaceToEmptySplashScreen && exceptCurrentApp) "set mSuggestType to 4;" else "not"} replace to empty splash screen")
+            printLog { "makeSplashScreenContentView(): ${if (isReplaceToEmptySplashScreen && exceptCurrentApp) "set mSuggestType to 4;" else "not"} replace to empty splash screen" }
         }
 
         /**
@@ -50,7 +50,7 @@ object ScopeHookHandler : BaseHookHandler() {
             SystemUIHooker.Members.getBGColorFromCache.addAfterHook {
                 val mTmpAttrs = instance!!.javaClass.resolve().firstField { name = "mTmpAttrs" }.getValueFrom<Any, Any>(instance)!!
                 mTmpAttrs.javaClass.resolve().firstField { name = "mIconBgColor" }.setValueTo(mTmpAttrs, 1)
-                printLog("getBGColorFromCache(): Set mIconBgColor to 1")
+                printLog { "getBGColorFromCache(): Set mIconBgColor to 1" }
             }
 
             // 重置因实现自定义作用域而影响到的 mTmpAttrs

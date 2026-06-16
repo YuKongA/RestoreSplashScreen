@@ -25,7 +25,7 @@ object XiaomiHookHandler : BaseHookHandler() {
         SystemUIHooker.Members.isMiuiHome_TaskSnapshotHelperImpl.addBeforeHook {
             if (prefs.get(Preferences.Background.REMOVE_BG_DRAWABLE)) {
                 resultFalse()
-                printLog("isMiuiHome(): set isMiuiHome() false")
+                printLog { "isMiuiHome(): set isMiuiHome() false" }
             }
         }
 
@@ -40,7 +40,7 @@ object XiaomiHookHandler : BaseHookHandler() {
         SystemUIHooker.Members.updateForceDarkSplashScreen_ForceDarkHelperStubImpl.addBeforeHook {
             if (prefs.get(Preferences.Background.IGNORE_DARK_MODE)) {
                 resultFalse()
-                printLog("isStaringWindowUnderNightMode(): ignore dark mode")
+                printLog { "isStaringWindowUnderNightMode(): ignore dark mode" }
             }
         }
     }

@@ -36,11 +36,14 @@ object HookExt {
 
     /**
      * 打印日志
+     *
+     * 入参为 lambda, 日志关闭时直接返回, 不会构造日志字符串
      */
-    fun printLog(vararg msg: String) {
+    inline fun printLog(msg: () -> String) {
         if (!Preferences.Log.ENABLE_LOG.get()) return
         if (System.currentTimeMillis() - Preferences.Log.ENABLE_LOG_TIMESTAMP.get() > 86400000) return
-        msg.forEach { MLog.i { it } }
+        val text = msg()
+        MLog.i { text }
     }
 
     /**

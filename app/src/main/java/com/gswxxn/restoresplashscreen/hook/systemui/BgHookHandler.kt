@@ -66,18 +66,18 @@ object BgHookHandler : BaseHookHandler() {
                     ?: 0) != 0
 
         if (skipAppWithBgColor) {
-            printLog("SplashScreenViewBuilder(): skip set bg color cuz app has been set bg color")
+            printLog { "SplashScreenViewBuilder(): skip set bg color cuz app has been set bg color" }
             return null
         }
 
         return if (currentPackageName in individualBgColorAppMap.keys) {
-            printLog("SplashScreenViewBuilder(): set individual background color, ${individualBgColorAppMap[currentPackageName]}")
+            printLog { "SplashScreenViewBuilder(): set individual background color, ${individualBgColorAppMap[currentPackageName]}" }
             individualBgColorAppMap[currentPackageName]?.toColorInt()
         } else if (!isInBGExceptList && (!isDarkMode || ignoreDarkMode))
             when (bgColorType) {
                 // 从图标取色
                 ChangeBGColorTypes.FromIcon.ordinal -> {
-                    printLog("SplashScreenViewBuilder(): get adaptive background color")
+                    printLog { "SplashScreenViewBuilder(): get adaptive background color" }
                     IconHookHandler.currentIconDominantColor ?: mTmpAttrsInstance!!.javaClass.resolve()
                         .firstField { name = "mSplashScreenIcon" }
                         .getValueFrom<Any, Drawable>(mTmpAttrsInstance)?.let { drawable ->
@@ -94,7 +94,7 @@ object BgHookHandler : BaseHookHandler() {
                 }
                 // 从壁纸取色
                 ChangeBGColorTypes.FromMonet.ordinal -> {
-                    printLog("SplashScreenViewBuilder(): get monet background color")
+                    printLog { "SplashScreenViewBuilder(): get monet background color" }
                     when (bgColorMode) {
                         BGColorModes.LightColor.ordinal -> monetLightPrimaryContainer(appContext!!)
                         BGColorModes.DarkColor.ordinal -> monetDarkSurface(appContext!!)
@@ -106,16 +106,16 @@ object BgHookHandler : BaseHookHandler() {
                 }
                 // 自定义颜色
                 ChangeBGColorTypes.FromCustom.ordinal -> {
-                    printLog("SplashScreenViewBuilder(): set overall background color")
+                    printLog { "SplashScreenViewBuilder(): set overall background color" }
                     prefs.get(if (isDarkMode) Preferences.Background.OVERALL_BG_COLOR_NIGHT else Preferences.Background.OVERALL_BG_COLOR)
                         .toColorInt()
                 }
 
                 else -> {
-                    printLog("SplashScreenViewBuilder(): not replace background color"); null
+                    printLog { "SplashScreenViewBuilder(): not replace background color" }; null
                 }
             } else {
-            printLog("SplashScreenViewBuilder(): skip set bg color cuz app in except list"); null
+            printLog { "SplashScreenViewBuilder(): skip set bg color cuz app in except list" }; null
         }
     }
 

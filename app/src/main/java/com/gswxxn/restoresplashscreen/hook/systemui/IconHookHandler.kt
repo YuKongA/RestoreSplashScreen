@@ -23,7 +23,6 @@ import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentA
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentComponentName
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getDevPrefs
-import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
@@ -33,6 +32,7 @@ import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.ui.page.data.ShrinkIconType
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.dp2px
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.isDarkMode
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils
 import com.gswxxn.restoresplashscreen.utils.IconPackManager
 import com.gswxxn.restoresplashscreen.utils.MIUIIconsHelper
@@ -58,6 +58,10 @@ object IconHookHandler : BaseHookHandler() {
      */
     private var currentUseBigHyperOSLagerIcon: Boolean? = null
     private var currentIconDrawable: Drawable? = null
+
+    /** 当前线程是否正处于 makeSplashScreenContentView 的同步执行区间内 */
+    private val isInMakeSplashScreenContentView = ThreadLocal<Boolean>()
+
     private val iconPackManager by lazy { IconPackManager(appContext!!, prefs.get(Preferences.Icon.ICON_PACK_PACKAGE_NAME)) }
     private val miuiIcons by lazy { MIUIIconsHelper(appContext!!, appClassLoader) }
 
@@ -85,12 +89,12 @@ object IconHookHandler : BaseHookHandler() {
                 val attrs = args[1]!!
                 attrs.javaClass.resolve().firstField { name = "mSplashScreenIcon" }.setValueTo(attrs, null)
             }
-            printLog("getWindowAttrs():${if (isDefaultStyle) "" else " not"} ignore set icon")
+            printLog { "getWindowAttrs():${if (isDefaultStyle) "" else " not"} ignore set icon" }
         }
 
         // 处理 Drawable 图标
         SystemUIHooker.Members.getIcon_IconProvider.addAfterHook {
-            printLog("getIcon_IconProvider(): current method is getIcon")
+            printLog { "getIcon_IconProvider(): current method is getIcon" }
             result = processIconDrawable(result as Drawable)
         }
 
@@ -100,22 +104,22 @@ object IconHookHandler : BaseHookHandler() {
                 val mFinalIconSizeField = instance!!.javaClass.resolve().firstField { name = "mFinalIconSize" }
                 val size = mFinalIconSizeField.getValueFrom<Any, Int>(instance) ?: 0
                 mFinalIconSizeField.setValueTo(instance, (size * 1.35).toInt())
-                printLog("createIconDrawable(): execute enlarge icon")
+                printLog { "createIconDrawable(): execute enlarge icon" }
             } else if (currentIsNeedShrinkIcon) {
                 val mFinalIconSizeField = instance!!.javaClass.resolve().firstField { name = "mFinalIconSize" }
                 val size = mFinalIconSizeField.getValueFrom<Any, Int>(instance) ?: 0
                 mFinalIconSizeField.setValueTo(instance, (size / 1.5).toInt())
-                printLog("createIconDrawable(): execute shrink icon")
+                printLog { "createIconDrawable(): execute shrink icon" }
             }
         }
 
         // 创建模糊背景 View
         SystemUIHooker.Members.build_SplashScreenViewBuilder.addAfterHook {
             if (prefs.get(Preferences.Icon.SHRINK_ICON) == ShrinkIconType.NotShrinkIcon.ordinal || !prefs.get(Preferences.Icon.ENABLE_ADD_ICON_BLUR_BG)) {
-                printLog("build_SplashScreenViewBuilder(): not enable add icon blur bg")
+                printLog { "build_SplashScreenViewBuilder(): not enable add icon blur bg" }
                 return@addAfterHook
             } else if (!currentIsNeedShrinkIcon || currentUseBigHyperOSLagerIcon == true) {
-                printLog("build_SplashScreenViewBuilder(): not need add icon blur bg")
+                printLog { "build_SplashScreenViewBuilder(): not need add icon blur bg" }
                 return@addAfterHook
             }
 
@@ -154,7 +158,7 @@ object IconHookHandler : BaseHookHandler() {
 
             splashScreenView.addView(iconBlurBGView, layoutParams)
             iconView.alpha = 0.9f
-            printLog("build_SplashScreenViewBuilder(): add icon blur bg")
+            printLog { "build_SplashScreenViewBuilder(): add icon blur bg" }
         }
 
         // 绘制圆角
@@ -185,13 +189,21 @@ object IconHookHandler : BaseHookHandler() {
                 }
             }
             iconView.clipToOutline = true // 启用轮廓剪裁
-            printLog("build_SplashScreenViewBuilder(): draw icon round corner")
+            printLog { "build_SplashScreenViewBuilder(): draw icon round corner" }
         }
 
-        // 不使用自带的图标缩放, 防止在 MIUI 上出现图标白边及图标错位
+        // 标记 makeSplashScreenContentView 的同步执行区间
+        SystemUIHooker.Members.makeSplashScreenContentView.addBeforeHook({ true }) {
+            isInMakeSplashScreenContentView.set(true)
+        }
+        SystemUIHooker.Members.makeSplashScreenContentView.addAfterHook({ true }) {
+            isInMakeSplashScreenContentView.set(false)
+        }
+
+        // 不使用自带的图标缩放, 防止在 HyperOS 上出现图标白边及图标错位
         SystemUIHooker.Members.normalizeAndWrapToAdaptiveIcon.addBeforeHook {
-            if (Thread.currentThread().stackTrace.any { it.methodName == "makeSplashScreenContentView" }) {
-                printLog("normalizeAndWrapToAdaptiveIcon(): avoid shrink icon by system ui")
+            if (isInMakeSplashScreenContentView.get() == true) {
+                printLog { "normalizeAndWrapToAdaptiveIcon(): avoid shrink icon by system ui" }
                 val boolShrinkNonAdaptiveIconsIndex = args.indexOfFirst { it is Boolean }
                 if (boolShrinkNonAdaptiveIconsIndex != -1) {
                     args(boolShrinkNonAdaptiveIconsIndex).set(false)
@@ -221,9 +233,10 @@ object IconHookHandler : BaseHookHandler() {
                 }
             }
         }
+
         SystemUIHooker.Members.createIconBitmap_BaseIconFactory.addBeforeHook {
             (args(0).any() as? Drawable)?.let { drawable ->
-                printLog("createIconBitmap_BaseIconFactory(): avoid shrink icon by system ui")
+                printLog { "createIconBitmap_BaseIconFactory(): avoid shrink icon by system ui" }
                 result = GraphicUtils.drawable2Bitmap(drawable, getIconSize(drawable))
             }
         }
@@ -259,7 +272,7 @@ object IconHookHandler : BaseHookHandler() {
 
         // 不显示 Splash Screen 图标
         if (isHideSplashScreenIcon) {
-            printLog("getIcon(): draw TRANSPARENT icon", "")
+            printLog { "getIcon(): draw TRANSPARENT icon" }
             return Color.TRANSPARENT.toDrawable()
         }
 
@@ -273,7 +286,7 @@ object IconHookHandler : BaseHookHandler() {
 
             ShrinkIconType.ShrinkAllIcon.ordinal -> currentIsNeedShrinkIcon = true
         }
-        printLog("getIcon(): currentIsNeedShrinkIcon: $currentIsNeedShrinkIcon")
+        printLog { "getIcon(): currentIsNeedShrinkIcon: $currentIsNeedShrinkIcon" }
 
         // 获取图标颜色: 仅当背景颜色取自图标时进行
         if (prefs.get(Preferences.Background.CHANG_BG_COLOR_TYPE) == ChangeBGColorTypes.FromIcon.ordinal) {
@@ -312,10 +325,10 @@ object IconHookHandler : BaseHookHandler() {
     /** 使用 HyperOS 大图标 */
     private fun getMIUILargeIcon(): Drawable? {
         if (isHyperOS && prefs.get(Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON) && miuiIcons.hasLargeIcon(currentPackageName)) {
-            printLog("getIcon(): use MIUI Large Icon")
+            printLog { "getIcon(): use MIUI Large Icon" }
             return miuiIcons.getLargeIconDrawable(currentPackageName)?.let {
                 val largeIconSize = miuiIcons.getLargeIconSize(currentPackageName)
-                printLog("getIcon(): large icon size: $largeIconSize")
+                printLog { "getIcon(): large icon size: $largeIconSize" }
                 currentUseBigHyperOSLagerIcon = if (largeIconSize in arrayOf("1x1", "1x2", "2x1", "2x2")) largeIconSize != "1x1" else null
 
                 // 转换成正方形图标
@@ -332,7 +345,7 @@ object IconHookHandler : BaseHookHandler() {
     /** 使用图标包 */
     private fun getIconFromIconPack(): Drawable? {
         if (prefs.get(Preferences.Icon.ICON_PACK_PACKAGE_NAME) != "None") {
-            printLog("getIcon(): use Icon Pack")
+            printLog { "getIcon(): use Icon Pack" }
             return when {
                 currentPackageName == "com.android.contacts" && currentComponentName.isNotEmpty() ->
                     iconPackManager.getIconByComponentName("ComponentInfo{com.android.contacts/$currentComponentName}")
@@ -355,7 +368,7 @@ object IconHookHandler : BaseHookHandler() {
     private fun replaceWayOfGetIcons(): Drawable? {
         if (!prefs.get(Preferences.Icon.ENABLE_REPLACE_ICON)) return null
 
-        printLog("getIcon(): replace way of getting icon")
+        printLog { "getIcon(): replace way of getting icon" }
         val pm = appContext!!.packageManager
 
         // 应用内通过 activity-alias + setComponentEnabledSetting 主动更换图标

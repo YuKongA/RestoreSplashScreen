@@ -25,7 +25,7 @@ object BottomHookHandler : BaseHookHandler() {
 
             if (isRemoveBrandingImage)
                 SplashScreenViewBuilderWrapper.getInstance(instance!!).setBrandingDrawable(null, 0, 0)
-            printLog("SplashScreenViewBuilder():${if (isRemoveBrandingImage) "" else " not"} remove branding image")
+            printLog { "SplashScreenViewBuilder():${if (isRemoveBrandingImage) "" else " not"} remove branding image" }
         }
     }
 }

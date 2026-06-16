@@ -76,9 +76,9 @@ object GenerateHookHandler : BaseHookHandler() {
             currentActivityInfo = activityInfo
             exceptCurrentApp = isExcept()
 
-            printLog(
+            printLog {
                 "****** $currentPackageName; $currentActivity: makeSplashScreenContentView(): ${if (exceptCurrentApp) "except" else "allow"} this app"
-            )
+            }
 
             /**
              * 强制开启启动遮罩
@@ -89,7 +89,7 @@ object GenerateHookHandler : BaseHookHandler() {
             if (forceEnableSplashScreen) {
                 if (!exceptCurrentApp) {
                     args(args.indexOfFirst { it is Int }).set(StartingWindowInfo.STARTING_WINDOW_TYPE_SPLASH_SCREEN)
-                    printLog("makeSplashScreenContentView(): forceEnableSplashScreen, set mSuggestType to STARTING_WINDOW_TYPE_SPLASH_SCREEN(1)")
+                    printLog { "makeSplashScreenContentView(): forceEnableSplashScreen, set mSuggestType to STARTING_WINDOW_TYPE_SPLASH_SCREEN(1)" }
                 }
             }
         }
@@ -110,12 +110,12 @@ object GenerateHookHandler : BaseHookHandler() {
 
                         if (duration == 0L) callOriginal()
                         else {
-                            printLog("removeStartingWindow(): remove splash screen of $currentPackageName after $duration ms")
+                            printLog { "removeStartingWindow(): remove splash screen of $currentPackageName after $duration ms" }
                             delayCallOriginal(duration, instance, args)
                         }
 
                     } catch (_: NumberFormatException) {
-                        printLog("removeStartingWindow(): $currentPackageName: a NumberFormatException is threw, maybe it's MIN_DURATION config is incorrect")
+                        printLog { "removeStartingWindow(): $currentPackageName: a NumberFormatException is threw, maybe it's MIN_DURATION config is incorrect" }
                         callOriginal()
                     }
                 }
@@ -124,7 +124,7 @@ object GenerateHookHandler : BaseHookHandler() {
                 else -> prefs.get(Preferences.Display.MIN_DURATION).let { duration ->
                     if (duration == 0) callOriginal()
                     else {
-                        printLog("removeStartingWindow(): remove splash screen of $currentPackageName after $duration ms (default value)")
+                        printLog { "removeStartingWindow(): remove splash screen of $currentPackageName after $duration ms (default value)" }
                         delayCallOriginal(duration.toLong(), instance, args)
                     }
                 }

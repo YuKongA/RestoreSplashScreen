@@ -13,19 +13,19 @@ object OplusHookHandler : BaseHookHandler() {
     /** 开始 Hook */
     override fun onHook() {
         SystemUIHooker.Members.setContentViewBackground_OplusShellStartingWindowManager.addBeforeHook {
-            printLog("ColorOS: setContentViewBackground_OplusShellStartingWindowManager(): intercept!!")
+            printLog { "ColorOS: setContentViewBackground_OplusShellStartingWindowManager(): intercept!!" }
             resultNull()
         }
 
         // 处理 Drawable 图标
         SystemUIHooker.Members.getIconExt_OplusShellStartingWindowManager.addAfterHook {
-            printLog("ColorOS: getIconExt_OplusShellStartingWindowManager(): current method is getIconExt")
+            printLog { "ColorOS: getIconExt_OplusShellStartingWindowManager(): current method is getIconExt" }
             result = IconHookHandler.processIconDrawable(result as Drawable)
         }
 
         // 禁止读取 WindowAttrs 缓存
         SystemUIHooker.Members.getWindowAttrsIfPresent_OplusShellStartingWindowManager.addBeforeHook {
-            printLog("ColorOS: getWindowAttrsIfPresent_OplusShellStartingWindowManager(): return false")
+            printLog { "ColorOS: getWindowAttrsIfPresent_OplusShellStartingWindowManager(): return false" }
             resultFalse()
         }
     }

@@ -47,7 +47,7 @@ object AndroidHooker {
                     && (!Preferences.Display.REDUCE_SPLASH_SCREEN.get() || isLaunchedFromSystemSurface)
 
             if (isForceShowSS) resultTrue()
-            printLog("[Android] validateStartingWindowTheme():${if (isForceShowSS) "" else " not"} force show $pkgName splash screen, isLaunchedFromSystemSurface: $isLaunchedFromSystemSurface")
+            printLog { "[Android] validateStartingWindowTheme():${if (isForceShowSS) "" else " not"} force show $pkgName splash screen, isLaunchedFromSystemSurface: $isLaunchedFromSystemSurface" }
         }.startHook(module)
 
         // 彻底关闭 Splash Screen
@@ -60,7 +60,7 @@ object AndroidHooker {
             val currentPkgName = instance!!.getField<String>("packageName")
 
             val isDisableSS = Preferences.Display.DISABLE_SPLASH_SCREEN.get()
-            printLog("[Android] addStartingWindow():${if (isDisableSS) "" else " not"} disable $currentPkgName splash screen")
+            printLog { "[Android] addStartingWindow():${if (isDisableSS) "" else " not"} disable $currentPkgName splash screen" }
             if (isDisableSS) resultNull()
         }.startHook(module)
 
@@ -75,7 +75,7 @@ object AndroidHooker {
                     && Preferences.Display.FORCE_ENABLE_SPLASH_SCREEN.get()
                     && args(1).boolean()
             if (isHotStartCompatible) result = 2
-            printLog("[Android] getStartingWindowType():${if (isHotStartCompatible) "" else " not"} set result to 2")
+            printLog { "[Android] getStartingWindowType():${if (isHotStartCompatible) "" else " not"} set result to 2" }
         }.startHook(module)
     }
 }
