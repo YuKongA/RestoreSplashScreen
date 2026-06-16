@@ -131,7 +131,7 @@ private fun CommonSettingsGroup() {
     )
 
     // 使用 MIUI 大图标
-    if (DeviceUtils.isMIUI) {
+    if (DeviceUtils.isHyperOS) {
         SwitchPreference(
             title = stringResource(R.string.use_miui_large_icon),
             key = Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON

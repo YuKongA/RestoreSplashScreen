@@ -8,7 +8,7 @@ import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getMapPrefs
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isHyperOS
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes

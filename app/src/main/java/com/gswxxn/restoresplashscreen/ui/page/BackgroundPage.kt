@@ -22,7 +22,7 @@ import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
 import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
-import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isMIUI
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import dev.lackluster.hyperx.navigation.LocalNavigator
 import org.koin.compose.koinInject
 import dev.lackluster.hyperx.navigation.Navigator
@@ -57,11 +57,11 @@ private fun SettingItems(navigator: Navigator) {
     val store = koinInject<RemotePreferenceStore>()
     val ignoreDarkMode = remember { mutableStateOf(store.get(Preferences.Background.IGNORE_DARK_MODE)) }
 
-    PreferenceGroup(position = if (isMIUI) ItemPosition.Middle else ItemPosition.Last) {
+    PreferenceGroup(position = if (isHyperOS) ItemPosition.Middle else ItemPosition.Last) {
         GeneralSettingItems(navigator = navigator, ignoreDarkMode = ignoreDarkMode)
     }
 
-    if (isMIUI) {
+    if (isHyperOS) {
         PreferenceGroup(position = ItemPosition.Last) {
             MIUISettingsGroup(ignoreDarkMode = ignoreDarkMode)
         }
@@ -100,12 +100,12 @@ private fun GeneralSettingItems(
         // 颜色模式
         DropDownPreference(
             title = stringResource(R.string.color_mode),
-            summary = if (isMIUI) stringResource(R.string.color_mode_tips) else null,
+            summary = if (isHyperOS) stringResource(R.string.color_mode_tips) else null,
             entries = BGColorModes.entries.mapIndexed { index, mode -> DropDownEntry(value = index, title = stringResource(mode.stringID)) },
             key = Preferences.Background.BG_COLOR_MODE,
             selectedIndex = colorMode
         ) {
-            if (isMIUI && colorMode.intValue == BGColorModes.FollowSystem.ordinal) {
+            if (isHyperOS && colorMode.intValue == BGColorModes.FollowSystem.ordinal) {
                 store.put(Preferences.Background.IGNORE_DARK_MODE, true)
                 ignoreDarkMode.value = true
             }

@@ -12,8 +12,8 @@ import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.IconHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.XiaomiHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.ScopeHookHandler
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isColorOS
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isHyperOS
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isColorOS
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.loadHookHandler
 import com.gswxxn.restoresplashscreen.utils.MLog
 import com.highcapable.kavaref.KavaRef.Companion.resolve

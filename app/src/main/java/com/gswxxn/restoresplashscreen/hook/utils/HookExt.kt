@@ -1,19 +1,15 @@
 package com.gswxxn.restoresplashscreen.hook.utils
 
 import com.gswxxn.restoresplashscreen.data.preference.Preferences
-import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.utils.RemotePreferences.get
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
 import com.gswxxn.restoresplashscreen.utils.MLog
 import com.highcapable.kavaref.KavaRef.Companion.resolve
-import com.highcapable.kavaref.extension.toClassOrNull
 import dev.lackluster.hyperx.ui.preference.core.PreferenceKey
 
 /**
  * Hook 端工具类
- *
- * 设备判断 lazy 需要宿主 [ClassLoader] 才能判断类是否存在
  */
 object HookExt {
 
@@ -45,22 +41,6 @@ object HookExt {
         if (!Preferences.Log.ENABLE_LOG.get()) return
         if (System.currentTimeMillis() - Preferences.Log.ENABLE_LOG_TIMESTAMP.get() > 86400000) return
         msg.forEach { MLog.i { it } }
-    }
-
-    /**
-     * 当前设备是否是 HyperOS 定制 Android 系统
-     * @return [Boolean] 是否符合条件
-     */
-    val isHyperOS by lazy { "android.miui.R".toClassOrNull(loader = SystemUIHooker.classLoader) != null }
-
-    /**
-     * 当前设备是否是 ColorOS 定制 Android 系统
-     * @return [Boolean] 是否符合条件
-     */
-    val isColorOS by lazy {
-        "oppo.R".toClassOrNull(loader = SystemUIHooker.classLoader) != null ||
-                "com.color.os.ColorBuild".toClassOrNull(loader = SystemUIHooker.classLoader) != null ||
-                "oplus.R".toClassOrNull(loader = SystemUIHooker.classLoader) != null
     }
 
     /**

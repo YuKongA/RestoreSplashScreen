@@ -23,7 +23,7 @@ import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentA
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentComponentName
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getDevPrefs
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isHyperOS
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
