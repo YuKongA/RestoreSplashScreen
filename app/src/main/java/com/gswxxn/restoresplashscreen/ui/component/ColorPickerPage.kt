@@ -87,6 +87,8 @@ import androidx.palette.graphics.Palette
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.ui.MainActivity
+import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
+import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toSet
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
@@ -633,8 +635,8 @@ private fun ResetText(
                     tmpConfigMap.remove(appColorConfig.packageName)
 
                     store.put(targetKey, tmpConfigMap.toSet())
-                    appColorConfig.defaultColorLight = getBgColor(appColorConfig.appIcon, true)
-                    appColorConfig.defaultColorDark = getBgColor(appColorConfig.appIcon, false)
+                    appColorConfig.defaultColorLight = appColorConfig.effectiveGlobalBGColor(false)
+                    appColorConfig.defaultColorDark = appColorConfig.effectiveGlobalBGColor(true)
                 }
                 pickedColor.colorInt = appColorConfig.getDefaultBGColor(currentDarkMode.value)
                 context.toast(R.string.save_successful)
@@ -732,7 +734,7 @@ private fun BottomBar(
                         } else {
                             val value = store.get(Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP).toMap()[appColorConfig.packageName]
                             if (value.isNullOrBlank())
-                                getBgColor(appColorConfig.appIcon, true)
+                                appColorConfig.effectiveGlobalBGColor(false)
                             else
                                 value.toColorInt()
                         }
@@ -745,7 +747,7 @@ private fun BottomBar(
                         } else {
                             val value = store.get(Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP_DARK).toMap()[appColorConfig.packageName]
                             if (value.isNullOrBlank())
-                                getBgColor(appColorConfig.appIcon, false)
+                                appColorConfig.effectiveGlobalBGColor(true)
                             else
                                 value.toColorInt()
                         }
@@ -998,7 +1000,7 @@ private fun @receiver:ColorInt Int.toHSVColorList() =
  */
 private class AppColorConfig(
     realPackageName: String?,
-    context: Context,
+    private val context: Context,
     private val store: RemotePreferenceStore
 ) {
     private val pm = context.packageManager
@@ -1055,9 +1057,44 @@ private class AppColorConfig(
         }
 
         val color = colorValue?.toColorInt()
-            ?: getBgColor(appIcon, !isDark)
+            ?: effectiveGlobalBGColor(isDark)
 
         return color
+    }
+
+    /**
+     * 未单独配置时的默认色: 镜像当前全局背景设置下该应用实际会显示的颜色,
+     * 使单独配置的默认值与全局表现一致 (对应 BgHookHandler 取色逻辑)
+     *
+     * @param isDark 是否暗色, 对应取色页浅色/暗色分页
+     */
+    fun effectiveGlobalBGColor(isDark: Boolean): Int {
+        // 浅色或深色由 BG_COLOR_MODE 决定
+        val isLight = when (store.get(Preferences.Background.BG_COLOR_MODE)) {
+            BGColorModes.LightColor.ordinal -> true
+            BGColorModes.DarkColor.ordinal -> false
+            else -> !isDark // FollowSystem
+        }
+        return when (store.get(Preferences.Background.CHANG_BG_COLOR_TYPE)) {
+            // 继承全局自定义色
+            ChangeBGColorTypes.FromCustom.ordinal -> {
+                val value = store.get(
+                    if (isDark) Preferences.Background.OVERALL_BG_COLOR_NIGHT
+                    else Preferences.Background.OVERALL_BG_COLOR
+                )
+                value.takeIf { it.isNotBlank() }?.toColorInt() ?: getBgColor(appIcon, isLight)
+            }
+            // 继承系统 Monet 色, 取不到时回退图标主色
+            ChangeBGColorTypes.FromMonet.ordinal -> runCatching {
+                context.resources.getColor(
+                    if (isLight) android.R.color.system_primary_container_light
+                    else android.R.color.system_surface_dark,
+                    context.theme
+                )
+            }.getOrDefault(getBgColor(appIcon, isLight))
+            // 从图标取色 / 不改背景: 回退图标主色
+            else -> getBgColor(appIcon, isLight)
+        }
     }
 }
 

@@ -29,6 +29,7 @@ import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
 import com.gswxxn.restoresplashscreen.hook.utils.toTyped
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
+import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.ui.page.data.ShrinkIconType
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.dp2px
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.isDarkMode
@@ -247,8 +248,6 @@ object IconHookHandler : BaseHookHandler() {
      */
     fun processIconDrawable(oriDrawable: Drawable): Drawable {
         val shrinkIconType = prefs.get(Preferences.Icon.SHRINK_ICON)
-        val colorMode = prefs.get(Preferences.Background.BG_COLOR_MODE)
-        val isDarkMode = isDarkMode(appContext!!)
 
         val isHideSplashScreenIcon = prefs.get(Preferences.Icon.ENABLE_HIDE_SPLASH_SCREEN_ICON) &&
                 if (prefs.get(Preferences.Scope.IS_HIDE_SPLASH_SCREEN_ICON_EXCEPTION_MODE))
@@ -266,9 +265,6 @@ object IconHookHandler : BaseHookHandler() {
 
         // 检索图标优先级: 使用 MIUI 大图标 -> 使用图标包 -> 替换获取图标方式 -> 原始图标
         val iconDrawable = getMIUILargeIcon() ?: getIconFromIconPack() ?: replaceWayOfGetIcons() ?: oriDrawable
-        val bitmap =
-            GraphicUtils.drawable2Bitmap(iconDrawable, if (currentUseBigHyperOSLagerIcon == true) iconSize * 2 else iconSize)
-
         // 判断是否需要缩小图标
         when (shrinkIconType) {
             ShrinkIconType.NotShrinkIcon.ordinal -> currentIsNeedShrinkIcon = false
@@ -279,15 +275,19 @@ object IconHookHandler : BaseHookHandler() {
         }
         printLog("getIcon(): currentIsNeedShrinkIcon: $currentIsNeedShrinkIcon")
 
-        // 获取图标颜色
-        currentIconDominantColor = GraphicUtils.getBgColor(
-            bitmap,
-            when (colorMode) {
-                BGColorModes.DarkColor.ordinal -> false
-                BGColorModes.FollowSystem.ordinal -> !isDarkMode
-                else -> true
-            }
-        )
+        // 获取图标颜色: 仅当背景颜色取自图标时进行
+        if (prefs.get(Preferences.Background.CHANG_BG_COLOR_TYPE) == ChangeBGColorTypes.FromIcon.ordinal) {
+            val colorMode = prefs.get(Preferences.Background.BG_COLOR_MODE)
+            val bitmap = GraphicUtils.drawable2Bitmap(iconDrawable, 112)
+            currentIconDominantColor = GraphicUtils.getBgColor(
+                bitmap,
+                when (colorMode) {
+                    BGColorModes.DarkColor.ordinal -> false
+                    BGColorModes.FollowSystem.ordinal -> !isDarkMode(appContext!!)
+                    else -> true
+                }
+            )
+        }
 
         currentIconDrawable = iconDrawable
         return iconDrawable
