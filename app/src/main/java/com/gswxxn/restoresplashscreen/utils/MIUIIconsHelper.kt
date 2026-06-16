@@ -19,7 +19,7 @@ import com.highcapable.kavaref.extension.toClass
 import com.highcapable.kavaref.extension.toClassOrNull
 
 /**
- * 用于从 MIUI 桌面检索大图标的辅助类
+ * 用于从小米桌面检索大图标的辅助类
  */
 @SuppressLint("DiscouragedApi")
 class MIUIIconsHelper(private val context: Context, private val classLoader: ClassLoader) {

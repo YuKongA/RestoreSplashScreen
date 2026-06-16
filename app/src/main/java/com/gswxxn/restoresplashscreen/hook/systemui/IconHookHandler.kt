@@ -113,82 +113,75 @@ object IconHookHandler : BaseHookHandler() {
             }
         }
 
-        // 创建模糊背景 View
+        // 模糊背景 + 圆角
         SystemUIHooker.Members.build_SplashScreenViewBuilder.addAfterHook {
-            if (prefs.get(Preferences.Icon.SHRINK_ICON) == ShrinkIconType.NotShrinkIcon.ordinal || !prefs.get(Preferences.Icon.ENABLE_ADD_ICON_BLUR_BG)) {
-                printLog { "build_SplashScreenViewBuilder(): not enable add icon blur bg" }
-                return@addAfterHook
-            } else if (!currentIsNeedShrinkIcon || currentUseBigHyperOSLagerIcon == true) {
-                printLog { "build_SplashScreenViewBuilder(): not need add icon blur bg" }
-                return@addAfterHook
-            }
-
             val splashScreenView = result as FrameLayout
             val iconView = splashScreenView.javaClass.resolve().firstField { name = "mIconView" }.toTyped<ImageView>().get(splashScreenView)
                 ?: return@addAfterHook
 
-            val iconSize = (appResources!!.getDimensionPixelSize(
-                $$"com.android.internal.R$dimen".toClass(loader = appClassLoader).resolve()
-                    .firstField { name = "starting_surface_icon_size" }.getValueFrom<Any, Int>(null)!!
-            ) / 1.5).toInt()
-            val bgIconSize = iconSize * 4
+            // 创建模糊背景 View
+            if (prefs.get(Preferences.Icon.SHRINK_ICON) != ShrinkIconType.NotShrinkIcon.ordinal &&
+                prefs.get(Preferences.Icon.ENABLE_ADD_ICON_BLUR_BG) &&
+                currentIsNeedShrinkIcon &&
+                currentUseBigHyperOSLagerIcon != true
+            ) {
+                val blurIconSize = (appResources!!.getDimensionPixelSize(
+                    $$"com.android.internal.R$dimen".toClass(loader = appClassLoader).resolve()
+                        .firstField { name = "starting_surface_icon_size" }.getValueFrom<Any, Int>(null)!!
+                ) / 1.5).toInt()
+                val bgIconSize = blurIconSize * 4
 
-            val blurBgDrawable = GraphicUtils.createShadowedIcon(
-                appContext,
-                currentIconDrawable,
-                iconSize,
-                iconSize * 4,
-                iconSize * getDevPrefs(Preferences.Dev.DEV_ICON_ROUND_CORNER_RATE) / 100f
-            ) ?: return@addAfterHook
-
-            val iconBlurBGView = ImageView(appContext).apply {
-                setImageDrawable(blurBgDrawable)
-                setRenderEffect(
-                    RenderEffect.createBlurEffect(
-                        bgIconSize.toFloat() / 10,
-                        bgIconSize.toFloat() / 10,
-                        Shader.TileMode.DECAL
-                    )
+                val blurBgDrawable = GraphicUtils.createShadowedIcon(
+                    appContext,
+                    currentIconDrawable,
+                    blurIconSize,
+                    blurIconSize * 4,
+                    blurIconSize * getDevPrefs(Preferences.Dev.DEV_ICON_ROUND_CORNER_RATE) / 100f
                 )
-                z = -1f
-            }
-
-            val layoutParams = FrameLayout.LayoutParams(bgIconSize, bgIconSize)
-                .apply { gravity = Gravity.CENTER }
-
-            splashScreenView.addView(iconBlurBGView, layoutParams)
-            iconView.alpha = 0.9f
-            printLog { "build_SplashScreenViewBuilder(): add icon blur bg" }
-        }
-
-        // 绘制圆角
-        SystemUIHooker.Members.build_SplashScreenViewBuilder.addAfterHook {
-            val splashScreenView = result as FrameLayout
-            val iconView = splashScreenView.javaClass.resolve().firstField { name = "mIconView" }.toTyped<ImageView>().get(splashScreenView)
-                ?: return@addAfterHook
-            val iconSize = instance!!.javaClass.resolve().firstField { name = "mIconSize" }.getValueFrom<Any, Int>(instance) ?: 0
-            val iconDrawable = instance!!.javaClass.resolve().firstField { name = "mIconDrawable" }.getValueFrom<Any, Drawable>(instance)
-                ?: return@addAfterHook
-            val isNeedDrawRoundCorner = prefs.get(Preferences.Display.ENABLE_DRAW_ROUND_CORNER) && // 用户配置
-                    $$"android.window.SplashScreenView$IconAnimateListener".toClass(loader = appClassLoader) !in iconDrawable.javaClass.interfaces && // 不为动态图标绘制圆角
-                    iconSize != 0 && // 如果没有图标 则不绘制圆角
-                    currentUseBigHyperOSLagerIcon == true // 如果当前使用 MIUI 大图标, 则不绘制圆角
-
-            if (!isNeedDrawRoundCorner) {
-                return@addAfterHook
-            }
-
-            // 为 view 添加轮廓
-            iconView.outlineProvider = object : ViewOutlineProvider() {
-                override fun getOutline(view: View, outline: Outline) {
-                    val border = dp2px(appContext!!, 1.5f)
-                    outline.setRoundRect(
-                        border, border, view.width - border, view.height - border,
-                        iconSize.toFloat() * getDevPrefs(Preferences.Dev.DEV_ICON_ROUND_CORNER_RATE) / 100
+                if (blurBgDrawable != null) {
+                    val iconBlurBGView = ImageView(appContext).apply {
+                        setImageDrawable(blurBgDrawable)
+                        setRenderEffect(
+                            RenderEffect.createBlurEffect(
+                                bgIconSize.toFloat() / 10,
+                                bgIconSize.toFloat() / 10,
+                                Shader.TileMode.DECAL
+                            )
+                        )
+                        z = -1f
+                    }
+                    splashScreenView.addView(
+                        iconBlurBGView,
+                        FrameLayout.LayoutParams(bgIconSize, bgIconSize).apply { gravity = Gravity.CENTER }
                     )
+                    iconView.alpha = 0.9f
+                    printLog { "build_SplashScreenViewBuilder(): add icon blur bg" }
                 }
             }
-            iconView.clipToOutline = true // 启用轮廓剪裁
+
+            // 绘制圆角（如果使用 HyperOS 大图标, 则不绘制圆角）
+            if (!prefs.get(Preferences.Display.ENABLE_DRAW_ROUND_CORNER) || currentUseBigHyperOSLagerIcon != true) {
+                return@addAfterHook
+            }
+            val iconSize = instance!!.javaClass.resolve().firstField { name = "mIconSize" }.getValueFrom<Any, Int>(instance) ?: 0
+            // 如果没有图标，则不绘制圆角
+            if (iconSize == 0) return@addAfterHook
+            val iconDrawable = instance!!.javaClass.resolve().firstField { name = "mIconDrawable" }.getValueFrom<Any, Drawable>(instance)
+                ?: return@addAfterHook
+            // 不为动态图标绘制圆角
+            if ($$"android.window.SplashScreenView$IconAnimateListener".toClass(loader = appClassLoader) in iconDrawable.javaClass.interfaces) {
+                return@addAfterHook
+            }
+            // 提前计算圆角参数
+            val border = dp2px(appContext!!, 1.5f)
+            val cornerRadius = iconSize.toFloat() * getDevPrefs(Preferences.Dev.DEV_ICON_ROUND_CORNER_RATE) / 100
+            iconView.outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: Outline) {
+                    outline.setRoundRect(border, border, view.width - border, view.height - border, cornerRadius)
+                }
+            }
+            // 启用轮廓剪裁
+            iconView.clipToOutline = true
             printLog { "build_SplashScreenViewBuilder(): draw icon round corner" }
         }
 
@@ -276,7 +269,7 @@ object IconHookHandler : BaseHookHandler() {
             return Color.TRANSPARENT.toDrawable()
         }
 
-        // 检索图标优先级: 使用 MIUI 大图标 -> 使用图标包 -> 替换获取图标方式 -> 原始图标
+        // 检索图标优先级: 使用 HyperOS 大图标 -> 使用图标包 -> 替换获取图标方式 -> 原始图标
         val iconDrawable = getMIUILargeIcon() ?: getIconFromIconPack() ?: replaceWayOfGetIcons() ?: oriDrawable
         // 判断是否需要缩小图标
         when (shrinkIconType) {
