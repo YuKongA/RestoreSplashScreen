@@ -27,6 +27,7 @@ object GenerateHookHandler : BaseHookHandler() {
     var currentComponentName = ""
     var currentActivity = ""
     var currentApplicationInfo = null as ApplicationInfo?
+    var currentActivityInfo = null as ActivityInfo?
     var exceptCurrentApp = false
     var isHooking = false
 
@@ -38,6 +39,7 @@ object GenerateHookHandler : BaseHookHandler() {
         currentComponentName = ""
         currentActivity = ""
         currentApplicationInfo = null
+        currentActivityInfo = null
         isHooking = false
         exceptCurrentApp = false
 
@@ -71,6 +73,7 @@ object GenerateHookHandler : BaseHookHandler() {
             currentComponentName = activityInfo.name
             currentActivity = activityInfo.targetActivity ?: "unknown activity"
             currentApplicationInfo = activityInfo.applicationInfo
+            currentActivityInfo = activityInfo
             exceptCurrentApp = isExcept()
 
             printLog(

@@ -18,11 +18,12 @@ import androidx.core.graphics.drawable.toDrawable
 import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
+import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentActivityInfo
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentApplicationInfo
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentComponentName
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getDevPrefs
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
@@ -36,8 +37,8 @@ import com.gswxxn.restoresplashscreen.utils.IconPackManager
 import com.gswxxn.restoresplashscreen.utils.MIUIIconsHelper
 import com.gswxxn.restoresplashscreen.wrapper.TransparentAdaptiveIconDrawable
 import com.highcapable.kavaref.KavaRef.Companion.resolve
-import com.highcapable.kavaref.extension.toClass
 import com.highcapable.kavaref.extension.classOf
+import com.highcapable.kavaref.extension.toClass
 
 /**
  * 此对象用于处理图标 Hook
@@ -47,16 +48,14 @@ object IconHookHandler : BaseHookHandler() {
     private var currentIsNeedShrinkIcon = false
 
     /**
-     * currentUseBigMIUILagerIcon 有三种状态:
+     * currentUseBigHyperOSLagerIcon 有三种状态:
      *
-     * null: 当前没有使用 MIUI 大图标
-     *
+     * null: 当前没有使用 HyperOS 大图标
      * true: 当前使用 1x2 或 2x1 或 2x2 的图标
-     *
      * false: 当前使用 1x1 的图标
      *
      */
-    private var currentUseBigMIUILagerIcon: Boolean? = null
+    private var currentUseBigHyperOSLagerIcon: Boolean? = null
     private var currentIconDrawable: Drawable? = null
     private val iconPackManager by lazy { IconPackManager(appContext!!, prefs.get(Preferences.Icon.ICON_PACK_PACKAGE_NAME)) }
     private val miuiIcons by lazy { MIUIIconsHelper(appContext!!, appClassLoader) }
@@ -67,7 +66,7 @@ object IconHookHandler : BaseHookHandler() {
     fun resetCache() {
         currentIconDominantColor = null
         currentIsNeedShrinkIcon = false
-        currentUseBigMIUILagerIcon = null
+        currentUseBigHyperOSLagerIcon = null
         currentIconDrawable = null
     }
 
@@ -96,7 +95,7 @@ object IconHookHandler : BaseHookHandler() {
 
         // 执行缩小图标
         SystemUIHooker.Members.createIconDrawable.addBeforeHook {
-            if (currentUseBigMIUILagerIcon == true) {
+            if (currentUseBigHyperOSLagerIcon == true) {
                 val mFinalIconSizeField = instance!!.javaClass.resolve().firstField { name = "mFinalIconSize" }
                 val size = mFinalIconSizeField.getValueFrom<Any, Int>(instance) ?: 0
                 mFinalIconSizeField.setValueTo(instance, (size * 1.35).toInt())
@@ -114,7 +113,7 @@ object IconHookHandler : BaseHookHandler() {
             if (prefs.get(Preferences.Icon.SHRINK_ICON) == ShrinkIconType.NotShrinkIcon.ordinal || !prefs.get(Preferences.Icon.ENABLE_ADD_ICON_BLUR_BG)) {
                 printLog("build_SplashScreenViewBuilder(): not enable add icon blur bg")
                 return@addAfterHook
-            } else if (!currentIsNeedShrinkIcon || currentUseBigMIUILagerIcon == true) {
+            } else if (!currentIsNeedShrinkIcon || currentUseBigHyperOSLagerIcon == true) {
                 printLog("build_SplashScreenViewBuilder(): not need add icon blur bg")
                 return@addAfterHook
             }
@@ -124,7 +123,7 @@ object IconHookHandler : BaseHookHandler() {
                 ?: return@addAfterHook
 
             val iconSize = (appResources!!.getDimensionPixelSize(
-                "com.android.internal.R\$dimen".toClass(loader = appClassLoader).resolve()
+                $$"com.android.internal.R$dimen".toClass(loader = appClassLoader).resolve()
                     .firstField { name = "starting_surface_icon_size" }.getValueFrom<Any, Int>(null)!!
             ) / 1.5).toInt()
             val bgIconSize = iconSize * 4
@@ -166,9 +165,9 @@ object IconHookHandler : BaseHookHandler() {
             val iconDrawable = instance!!.javaClass.resolve().firstField { name = "mIconDrawable" }.getValueFrom<Any, Drawable>(instance)
                 ?: return@addAfterHook
             val isNeedDrawRoundCorner = prefs.get(Preferences.Display.ENABLE_DRAW_ROUND_CORNER) && // 用户配置
-                    "android.window.SplashScreenView\$IconAnimateListener".toClass(loader = appClassLoader) !in iconDrawable.javaClass.interfaces && // 不为动态图标绘制圆角
+                    $$"android.window.SplashScreenView$IconAnimateListener".toClass(loader = appClassLoader) !in iconDrawable.javaClass.interfaces && // 不为动态图标绘制圆角
                     iconSize != 0 && // 如果没有图标 则不绘制圆角
-                    currentUseBigMIUILagerIcon == true // 如果当前使用 MIUI 大图标, 则不绘制圆角
+                    currentUseBigHyperOSLagerIcon == true // 如果当前使用 MIUI 大图标, 则不绘制圆角
 
             if (!isNeedDrawRoundCorner) {
                 return@addAfterHook
@@ -268,7 +267,7 @@ object IconHookHandler : BaseHookHandler() {
         // 检索图标优先级: 使用 MIUI 大图标 -> 使用图标包 -> 替换获取图标方式 -> 原始图标
         val iconDrawable = getMIUILargeIcon() ?: getIconFromIconPack() ?: replaceWayOfGetIcons() ?: oriDrawable
         val bitmap =
-            GraphicUtils.drawable2Bitmap(iconDrawable, if (currentUseBigMIUILagerIcon == true) iconSize * 2 else iconSize)
+            GraphicUtils.drawable2Bitmap(iconDrawable, if (currentUseBigHyperOSLagerIcon == true) iconSize * 2 else iconSize)
 
         // 判断是否需要缩小图标
         when (shrinkIconType) {
@@ -295,14 +294,14 @@ object IconHookHandler : BaseHookHandler() {
     }
 
     /**
-     * 获取 SplashScreen 图标的大小。
+     * 获取 SplashScreen 图标的大小
      *
      * @param drawable 要获取大小的 Drawable 对象
      * @return 图标的大小
      */
     private fun getIconSize(drawable: Drawable): Int {
         val mIconSize = appResources!!.getDimensionPixelSize(
-            "com.android.internal.R\$dimen".toClass(loader = appClassLoader).resolve()
+            $$"com.android.internal.R$dimen".toClass(loader = appClassLoader).resolve()
                 .firstField { name = "starting_surface_icon_size" }.getValueFrom<Any, Int>(null)!!
         )
 
@@ -310,15 +309,14 @@ object IconHookHandler : BaseHookHandler() {
         else mIconSize
     }
 
-    /** 使用 MIUI 大图标 */
+    /** 使用 HyperOS 大图标 */
     private fun getMIUILargeIcon(): Drawable? {
-        if (isMIUI && prefs.get(Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON) && miuiIcons.hasLargeIcon(currentPackageName)) {
+        if (isHyperOS && prefs.get(Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON) && miuiIcons.hasLargeIcon(currentPackageName)) {
             printLog("getIcon(): use MIUI Large Icon")
             return miuiIcons.getLargeIconDrawable(currentPackageName)?.let {
                 val largeIconSize = miuiIcons.getLargeIconSize(currentPackageName)
                 printLog("getIcon(): large icon size: $largeIconSize")
-                currentUseBigMIUILagerIcon =
-                    if (largeIconSize in arrayOf("1x1", "1x2", "2x1", "2x2")) largeIconSize != "1x1" else null
+                currentUseBigHyperOSLagerIcon = if (largeIconSize in arrayOf("1x1", "1x2", "2x1", "2x2")) largeIconSize != "1x1" else null
 
                 // 转换成正方形图标
                 if (largeIconSize in arrayOf("1x2", "2x1")) {
@@ -355,40 +353,50 @@ object IconHookHandler : BaseHookHandler() {
      * 使用 Context.packageManager.getApplicationIcon() 的方式获取图标
      */
     private fun replaceWayOfGetIcons(): Drawable? {
-        if (prefs.get(Preferences.Icon.ENABLE_REPLACE_ICON)) {
-            printLog("getIcon(): replace way of getting icon")
-            val pm = appContext!!.packageManager
-            return when {
-                // 1、优先处理电话拨号界面
-                currentPackageName == "com.android.contacts" && currentComponentName.isNotEmpty() -> getActivityIconOrApp(pm)
+        if (!prefs.get(Preferences.Icon.ENABLE_REPLACE_ICON)) return null
 
-                // 2、在 MIUI/HyperOS 上尝试获取完美图标
-                isMIUI && miuiIcons.isSupportMIUIModeIcon -> miuiIcons.getFancyIconDrawable(currentPackageName, appUserId, currentApplicationInfo)
+        printLog("getIcon(): replace way of getting icon")
+        val pm = appContext!!.packageManager
 
-                // 3、如果存在 ComponentName 则优先使用 ComponentName 获取图标
-                currentComponentName.isNotEmpty() -> getActivityIconOrApp(pm)
+        // 应用内通过 activity-alias + setComponentEnabledSetting 主动更换图标
+        val launchedInfo = currentActivityInfo
+        val isSwitchedAliasIcon = launchedInfo != null &&
+                launchedInfo.targetActivity != null &&                   // 是 activity-alias
+                launchedInfo.icon != 0 &&                                // alias 自带图标
+                launchedInfo.icon != (currentApplicationInfo?.icon ?: 0) // 不同于默认应用图标
 
-                // 4、最后使用包名直接获取图标
-                else -> pm.getApplicationIcon(currentPackageName)
-            }
+        return when {
+            // 0、应用内主动更换的图标
+            isSwitchedAliasIcon -> runCatching { launchedInfo.loadIcon(pm) }.getOrNull() ?: getActivityIconOrApp(pm)
+
+            // 1、处理电话拨号界面（正常情况下已被阶段 0 覆盖）
+            currentPackageName == "com.android.contacts" && currentComponentName.isNotEmpty() -> getActivityIconOrApp(pm)
+
+            // 2、在 HyperOS 上尝试获取完美图标
+            isHyperOS && miuiIcons.isSupportMIUIModeIcon -> miuiIcons.getFancyIconDrawable(
+                currentPackageName,
+                appUserId,
+                currentApplicationInfo
+            )
+
+            // 3、优先使用 ComponentName 获取 Activity 图标, 失败时回退到 Application 图标
+            else -> getActivityIconOrApp(pm)
         }
-        return null
     }
 
     /**
      * 使用 ComponentName 获取 Activity 图标
      *
-     * 获取失败时回退到使用 Application 图标
+     * 失败时回退到 Application 图标
      * */
-    fun getActivityIconOrApp(pm: PackageManager): Drawable? {
-        return if (currentComponentName.isNotEmpty()) {
+    fun getActivityIconOrApp(pm: PackageManager): Drawable {
+        if (currentComponentName.isNotEmpty()) {
             try {
-                pm.getActivityIcon(ComponentName(currentPackageName, currentComponentName))
+                return pm.getActivityIcon(ComponentName(currentPackageName, currentComponentName))
             } catch (_: Exception) {
-                pm.getApplicationIcon(currentPackageName)
+                // 回退到 Application 图标
             }
-        } else {
-            pm.getApplicationIcon(currentPackageName)
         }
+        return pm.getApplicationIcon(currentPackageName)
     }
 }

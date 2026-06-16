@@ -13,7 +13,7 @@ import com.gswxxn.restoresplashscreen.hook.systemui.IconHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.XiaomiHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.ScopeHookHandler
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isColorOS
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.loadHookHandler
 import com.gswxxn.restoresplashscreen.utils.MLog
 import com.highcapable.kavaref.KavaRef.Companion.resolve
@@ -110,14 +110,14 @@ object SystemUIHooker {
 
         // Xiaomi
         val isMiuiHome_TaskSnapshotHelperImpl = HookManager(
-            isMIUI && "android.app.TaskSnapshotHelperImpl".toClassOrNull(loader = classLoader) != null
+            isHyperOS && "android.app.TaskSnapshotHelperImpl".toClassOrNull(loader = classLoader) != null
         ) {
             "android.app.TaskSnapshotHelperImpl".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "isMiuiHome"
                 parameters(String::class)
             }?.self
         }
-        val updateForceDarkSplashScreen_ForceDarkHelperStubImpl = HookManager(isMIUI) {
+        val updateForceDarkSplashScreen_ForceDarkHelperStubImpl = HookManager(isHyperOS) {
             $$"android.window.SplashScreenView$Builder".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "isStaringWindowUnderNightMode"
                 emptyParameters()

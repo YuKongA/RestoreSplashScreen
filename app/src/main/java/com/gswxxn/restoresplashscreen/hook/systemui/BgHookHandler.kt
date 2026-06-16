@@ -8,7 +8,7 @@ import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getMapPrefs
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
@@ -54,7 +54,7 @@ object BgHookHandler : BaseHookHandler() {
         val bgColorMode = prefs.get(Preferences.Background.BG_COLOR_MODE)
         val bgColorType = prefs.get(Preferences.Background.CHANG_BG_COLOR_TYPE)
         val isInBGExceptList = currentPackageName in prefs.get(Preferences.AppList.BG_EXCEPT_LIST)
-        val ignoreDarkMode = prefs.get(Preferences.Background.IGNORE_DARK_MODE) || !isMIUI
+        val ignoreDarkMode = prefs.get(Preferences.Background.IGNORE_DARK_MODE) || !isHyperOS
         val individualBgColorAppMap = getMapPrefs(
             if (!isDarkMode) Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP
             else Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP_DARK

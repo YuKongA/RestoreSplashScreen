@@ -6,10 +6,9 @@ import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.base.HookManager
-import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.exceptCurrentApp
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.isHooking
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
@@ -47,7 +46,7 @@ object ScopeHookHandler : BaseHookHandler() {
          * 此操作在原生系统为非必要操作, 尤其在某些类原生系统执行此 Hook 会造成额外错误,
          * 所以这里手动指定为只在 MIUI 系统上执行该 Hook, 后续如有返回其他厂商系统需要类似操作, 再手动添加
          */
-        if (isMIUI) {
+        if (isHyperOS) {
             SystemUIHooker.Members.getBGColorFromCache.addAfterHook {
                 val mTmpAttrs = instance!!.javaClass.resolve().firstField { name = "mTmpAttrs" }.getValueFrom<Any, Any>(instance)!!
                 mTmpAttrs.javaClass.resolve().firstField { name = "mIconBgColor" }.setValueTo(mTmpAttrs, 1)

@@ -3,7 +3,6 @@ package com.gswxxn.restoresplashscreen.hook.utils
 import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.isMIUI
 import com.gswxxn.restoresplashscreen.hook.utils.RemotePreferences.get
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
 import com.gswxxn.restoresplashscreen.utils.MLog
@@ -49,10 +48,10 @@ object HookExt {
     }
 
     /**
-     * 当前设备是否是 MIUI 定制 Android 系统
+     * 当前设备是否是 HyperOS 定制 Android 系统
      * @return [Boolean] 是否符合条件
      */
-    val isMIUI by lazy { "android.miui.R".toClassOrNull(loader = SystemUIHooker.classLoader) != null }
+    val isHyperOS by lazy { "android.miui.R".toClassOrNull(loader = SystemUIHooker.classLoader) != null }
 
     /**
      * 当前设备是否是 ColorOS 定制 Android 系统
