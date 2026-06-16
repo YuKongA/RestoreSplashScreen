@@ -4,18 +4,20 @@ import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.pm.ComponentInfo
 import androidx.annotation.Keep
+import com.gswxxn.restoresplashscreen.hook.SystemUIHooker.init
+import com.gswxxn.restoresplashscreen.hook.SystemUIHooker.onHook
 import com.gswxxn.restoresplashscreen.hook.base.HookManager
 import com.gswxxn.restoresplashscreen.hook.systemui.BgHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.BottomHookHandler
-import com.gswxxn.restoresplashscreen.hook.systemui.OplusHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.IconHookHandler
-import com.gswxxn.restoresplashscreen.hook.systemui.XiaomiHookHandler
+import com.gswxxn.restoresplashscreen.hook.systemui.OplusHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.ScopeHookHandler
+import com.gswxxn.restoresplashscreen.hook.systemui.XiaomiHookHandler
+import com.gswxxn.restoresplashscreen.hook.utils.HookExt.loadHookHandler
 import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isColorOS
 import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
-import com.gswxxn.restoresplashscreen.hook.utils.HookExt.loadHookHandler
-import com.gswxxn.restoresplashscreen.utils.MLog
+import com.gswxxn.restoresplashscreen.utils.XMLog
 import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.kavaref.extension.classOf
 import com.highcapable.kavaref.extension.makeAccessible
@@ -63,17 +65,17 @@ object SystemUIHooker {
                 }?.self
         }
         val startingWindowViewBuilderConstructor = HookManager {
-            ("com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$StartingWindowViewBuilder".toClassOrNull(loader = classLoader)
-                ?: "com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$SplashViewBuilder".toClassOrNull(loader = classLoader)) // Android 14
+            ($$"com.android.wm.shell.startingsurface.SplashscreenContentDrawer$StartingWindowViewBuilder".toClassOrNull(loader = classLoader)
+                ?: $$"com.android.wm.shell.startingsurface.SplashscreenContentDrawer$SplashViewBuilder".toClassOrNull(loader = classLoader)) // Android 14
                 ?.resolve()?.optional()?.firstConstructorOrNull { parameterCount { it in 2..3 } }?.self
         }
         val createIconDrawable = HookManager {
-            ("com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$StartingWindowViewBuilder".toClassOrNull(loader = classLoader)
-                ?: "com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$SplashViewBuilder".toClassOrNull(loader = classLoader)) // Android 14
+            ($$"com.android.wm.shell.startingsurface.SplashscreenContentDrawer$StartingWindowViewBuilder".toClassOrNull(loader = classLoader)
+                ?: $$"com.android.wm.shell.startingsurface.SplashscreenContentDrawer$SplashViewBuilder".toClassOrNull(loader = classLoader)) // Android 14
                 ?.resolve()?.optional()?.firstMethodOrNull { name = "createIconDrawable" }?.self
         }
         val iconColor_constructor = HookManager {
-            "com.android.wm.shell.startingsurface.SplashscreenContentDrawer\$ColorCache\$IconColor".toClassOrNull(loader = classLoader)
+            $$"com.android.wm.shell.startingsurface.SplashscreenContentDrawer$ColorCache$IconColor".toClassOrNull(loader = classLoader)
                 ?.resolve()?.optional()?.firstConstructorOrNull()?.self
         }
         val getIcon_IconProvider = HookManager(!isColorOS) {
@@ -98,7 +100,7 @@ object SystemUIHooker {
             }?.self
         }
         val build_SplashScreenViewBuilder = HookManager {
-            "android.window.SplashScreenView\$Builder".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
+            $$"android.window.SplashScreenView$Builder".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
                 name = "build"
             }?.self
         }
@@ -131,21 +133,21 @@ object SystemUIHooker {
         val setContentViewBackground_OplusShellStartingWindowManager = HookManager(isColorOS) {
             "com.android.wm.shell.startingsurface.OplusShellStartingWindowManager".toClassOrNull(loader = classLoader)?.resolve()
                 ?.optional()?.firstMethodOrNull {
-                name = "setContentViewBackground"
-            }?.self
+                    name = "setContentViewBackground"
+                }?.self
         }
         val getIconExt_OplusShellStartingWindowManager = HookManager(isColorOS) {
             "com.android.wm.shell.startingsurface.OplusShellStartingWindowManager".toClassOrNull(loader = classLoader)?.resolve()
                 ?.optional()?.firstMethodOrNull {
-                name = "getIconExt"
-                parameterCount { it in 4..6 }
-            }?.self
+                    name = "getIconExt"
+                    parameterCount { it in 4..6 }
+                }?.self
         }
         val getWindowAttrsIfPresent_OplusShellStartingWindowManager = HookManager(isColorOS) {
             "com.android.wm.shell.startingsurface.OplusShellStartingWindowManager".toClassOrNull(loader = classLoader)?.resolve()
                 ?.optional()?.firstMethodOrNull {
-                name = "getWindowAttrsIfPresent"
-            }?.self
+                    name = "getWindowAttrsIfPresent"
+                }?.self
         }
     }
 
@@ -210,7 +212,7 @@ object SystemUIHooker {
             if (hookManager is HookManager) try {
                 hookManager.startHook(module)
             } catch (e: Throwable) {
-                MLog.e(e)
+                XMLog.e(e)
             }
         }
     }

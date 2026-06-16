@@ -147,7 +147,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
             classOf<UserHandle>().resolve().firstField { name = "CURRENT" }.getValueFrom<UserHandle, Any>(null)
         ) ?: false
     } catch (e: Throwable) {
-        MLog.e(t = e) { "Failed to get hasLargeIcon for package $packageName" }
+        XMLog.e(t = e) { "Failed to get hasLargeIcon for package $packageName" }
         false
     }
 
@@ -169,7 +169,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
             config.javaClass.resolve().optional().firstFieldOrNull { name = "size" }?.getValueFrom<Any, String>(config)
         }
     } catch (e: Throwable) {
-        MLog.e(t = e) { "Failed to get hasLargeIcon for package $packageName" }
+        XMLog.e(t = e) { "Failed to get hasLargeIcon for package $packageName" }
         null
     }
 
@@ -197,7 +197,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
                 ?.toTyped<Drawable>()?.invoke(largeIcon)
         }
     } catch (e: Throwable) {
-        MLog.e(t = e) { "Failed to get large icon drawable for package $packageName" }
+        XMLog.e(t = e) { "Failed to get large icon drawable for package $packageName" }
         null
     }
 

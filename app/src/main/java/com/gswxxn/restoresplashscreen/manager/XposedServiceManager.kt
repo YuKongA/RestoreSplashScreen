@@ -1,7 +1,7 @@
 package com.gswxxn.restoresplashscreen.manager
 
 import com.gswxxn.restoresplashscreen.data.Scope
-import com.gswxxn.restoresplashscreen.utils.MLog
+import com.gswxxn.restoresplashscreen.utils.XMLog
 import io.github.libxposed.service.HookedTarget
 import io.github.libxposed.service.HotReloadResult
 import io.github.libxposed.service.XposedService
@@ -22,14 +22,14 @@ class XposedServiceManager : XposedServiceHelper.OnServiceListener {
     }
 
     override fun onServiceBind(service: XposedService) {
-        MLog.d {
+        XMLog.d {
             "XposedServiceManager.onServiceBind"
         }
         _serviceFlow.value = service
     }
 
     override fun onServiceDied(service: XposedService) {
-        MLog.d {
+        XMLog.d {
             "XposedServiceManager.onServiceDied"
         }
         _serviceFlow.value = null
@@ -89,7 +89,7 @@ class XposedServiceManager : XposedServiceHelper.OnServiceListener {
                     if (done.incrementAndGet() == total) onComplete(succeeded.get(), total)
                 }
             }.onFailure {
-                MLog.e(it)
+                XMLog.e(it)
                 if (done.incrementAndGet() == total) onComplete(succeeded.get(), total)
             }
         }

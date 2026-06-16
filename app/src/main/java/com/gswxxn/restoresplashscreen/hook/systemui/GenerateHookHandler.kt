@@ -6,16 +6,16 @@ import com.gswxxn.restoresplashscreen.data.StartingWindowInfo
 import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
+import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.delayScope
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getMapPrefs
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 import com.gswxxn.restoresplashscreen.hook.utils.ReflectCache
-import com.gswxxn.restoresplashscreen.utils.MLog
-import com.highcapable.kavaref.KavaRef.Companion.resolve
-import com.highcapable.kavaref.extension.toClass
+import com.gswxxn.restoresplashscreen.utils.XMLog
 import io.github.libxposed.api.XposedInterface
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.lang.reflect.Method
@@ -143,7 +143,9 @@ object GenerateHookHandler : BaseHookHandler() {
      *
      */
     private fun delayCallOriginal(duration: Long, instance: Any?, args: Array<Any?>) {
-        val method = resolveRemoveStartingWindowMethod()
+        // 复用 Members.removeStartingWindow 已解析的成员，避免重复反射解析，
+        // 同时保证延迟调用与 hook 落点是同一个方法
+        val method = SystemUIHooker.Members.removeStartingWindow.member as? Method
         val argsCopy = args.copyOf()
         delayScope.launch {
             delay(duration.milliseconds)
@@ -153,24 +155,21 @@ object GenerateHookHandler : BaseHookHandler() {
                     invoker.setType(XposedInterface.Invoker.Type.Origin())
                     invoker.invoke(instance, *argsCopy)
                 } else {
-                    MLog.w { "delayCallOriginal(): removeStartingWindow Method 解析失败，无法延迟调用原方法" }
+                    XMLog.w { "delayCallOriginal(): removeStartingWindow Method 解析失败，无法延迟调用原方法" }
                 }
             } catch (e: Throwable) {
-                MLog.e(e)
+                XMLog.e(e)
             }
         }
     }
 
     /**
-     * 解析 `ShellTaskOrganizer#removeStartingWindow` 的原始 [Method]
+     * 取消所有挂起的延迟摘除协程
+     *
+     * 热重载时由**旧代**调用：冻结旧代前主动取消，避免残留协程在新一代生效后误触发。
      */
-    private fun resolveRemoveStartingWindowMethod(): Method? = try {
-        "com.android.wm.shell.ShellTaskOrganizer".toClass(appClassLoader, false)
-            .resolve()
-            .firstMethodOrNull { name = "removeStartingWindow" }
-            ?.self
-    } catch (_: Throwable) {
-        null
+    fun cancelPendingDelays() {
+        delayScope.coroutineContext.cancelChildren()
     }
 
     /**

@@ -1,6 +1,6 @@
 package com.gswxxn.restoresplashscreen.hook.base
 
-import com.gswxxn.restoresplashscreen.utils.MLog
+import com.gswxxn.restoresplashscreen.utils.XMLog
 import io.github.libxposed.api.XposedInterface
 import io.github.libxposed.api.XposedModule
 import java.lang.reflect.Executable
@@ -15,11 +15,13 @@ import java.lang.reflect.Method
 class HookManager(private val createCondition: Boolean = true, block: () -> Executable?) {
 
     companion object {
-        // 默认不执行 Hook；获取到包名后会被替换为「仅作用域内应用才执行」
+        /** 默认不执行 Hook；获取到包名后会被替换为「仅作用域内应用才执行」*/
         var defaultExecCondition: (() -> Boolean) = { false }
     }
 
-    private var member: Executable? = null
+    /** 已解析的目标成员；对外只读，供需要复用已解析反射结果的调用方使用 */
+    var member: Executable? = null
+        private set
 
     private val beforeHooks = mutableListOf<HookParam.() -> Unit>()
     private val afterHooks = mutableListOf<HookParam.() -> Unit>()
@@ -33,7 +35,7 @@ class HookManager(private val createCondition: Boolean = true, block: () -> Exec
         if (createCondition) try {
             member = block()
         } catch (e: Throwable) {
-            MLog.e(e)
+            XMLog.e(e)
         }
     }
 
@@ -51,7 +53,10 @@ class HookManager(private val createCondition: Boolean = true, block: () -> Exec
     }
 
     /** ReplaceHook 只能存在一个，后加的覆盖先加的；条件不满足时调用原方法 */
-    fun addReplaceHook(execCondition: (() -> Boolean) = defaultExecCondition, block: HookParam.() -> Any?): HookManager {
+    fun addReplaceHook(
+        execCondition: (() -> Boolean) = defaultExecCondition,
+        block: HookParam.() -> Any?
+    ): HookManager {
         replaceHook = { if (execCondition()) block() else callOriginal() }
         return this
     }
@@ -59,7 +64,7 @@ class HookManager(private val createCondition: Boolean = true, block: () -> Exec
     fun startHook(module: XposedModule) {
         val m = member ?: return
         if (hasReplaceHook && (hasBeforeHooks || hasAfterHooks)) {
-            MLog.w { "Conflict: ReplaceHook 与 Before/After 不应共存，before/after 将被忽略。成员: ${m.declaringClass.name}#${m.name}" }
+            XMLog.w { "Conflict: ReplaceHook 与 Before/After 不应共存，before/after 将被忽略。成员: ${m.declaringClass.name}#${m.name}" }
         }
         try {
             module.hook(m).intercept(object : XposedInterface.Hooker {
@@ -90,7 +95,7 @@ class HookManager(private val createCondition: Boolean = true, block: () -> Exec
                 }
             })
         } catch (e: Throwable) {
-            MLog.e(e)
+            XMLog.e(e)
         }
     }
 }

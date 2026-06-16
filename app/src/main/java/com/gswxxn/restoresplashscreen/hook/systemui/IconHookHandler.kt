@@ -194,7 +194,7 @@ object IconHookHandler : BaseHookHandler() {
             isInMakeSplashScreenContentView.set(true)
         }
         SystemUIHooker.Members.makeSplashScreenContentView.addAfterHook({ true }) {
-            isInMakeSplashScreenContentView.set(false)
+            isInMakeSplashScreenContentView.remove()
         }
 
         // 不使用自带的图标缩放, 防止在 HyperOS 上出现图标白边及图标错位

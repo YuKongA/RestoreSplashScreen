@@ -44,5 +44,6 @@ enum class ModulePreferenceRes(
     BackgroundSettings(R.drawable.ic_color, R.string.background_settings, Pages.BACKGROUND_SETTINGS),
     DisplaySettings(R.drawable.ic_monitor, R.string.display_settings, Pages.DISPLAY_SETTINGS),
     DevSettings(R.drawable.ic_lab, R.string.dev_settings, Pages.DEVELOPER_SETTINGS),
-    FAQ(R.drawable.ic_help, R.string.faq)
+    FAQ(R.drawable.ic_help, R.string.faq),
+    About(R.drawable.ic_info, R.string.about, Pages.ABOUT)
 }

@@ -10,6 +10,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,22 +66,24 @@ class MainActivity : HyperXActivity() {
 
         // Xposed 框架信息
         val xposedFrameworkName: MutableState<String> = mutableStateOf("Xposed")
-        val xposedApiVersion: MutableState<Int> = mutableStateOf(0)
+        val xposedApiVersion: MutableState<Int> = mutableIntStateOf(0)
     }
 
     private val xposedServiceManager: XposedServiceManager by inject()
     private val globalPreferencesRepository: GlobalPreferencesRepository by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        devMode.value = globalPreferencesRepository.get(Preferences.Dev.ENABLE_DEV_SETTINGS)
-        blurEnabled.value = globalPreferencesRepository.get(Preferences.Module.MODULE_APP_BLUR)
-        splitEnabled.value = globalPreferencesRepository.get(Preferences.Module.SPLIT_VIEW)
-
         lifecycleScope.launch {
             xposedServiceManager.serviceFlow.collect { service ->
                 moduleActive.value = isModuleActivated(service)
                 xposedFrameworkName.value = service?.frameworkName ?: "Xposed"
                 xposedApiVersion.value = service?.apiVersion ?: 0
+                // Xposed 服务绑定后才能读到真实的远程配置，在此刷新依赖持久化值的 UI 状态
+                if (service != null) {
+                    devMode.value = globalPreferencesRepository.get(Preferences.Dev.ENABLE_DEV_SETTINGS)
+                    blurEnabled.value = globalPreferencesRepository.get(Preferences.Module.MODULE_APP_BLUR)
+                    splitEnabled.value = globalPreferencesRepository.get(Preferences.Module.SPLIT_VIEW)
+                }
                 refreshRestartState()
             }
         }
@@ -105,11 +108,7 @@ class MainActivity : HyperXActivity() {
     }
 
     /**
-     * 刷新被 Hook 进程是否需要重启的状态。
-     *
-     * 取代原 YukiHookAPI 的 dataChannel 版本校验，改用 [XposedServiceManager.queryRestartState]
-     * （基于 libxposed service API 102 的 getRunningTargets / HookedTarget.State）。
-     * 查询不可用时保持安全默认值（不提示重启），避免误报。
+     * 刷新被 Hook 进程是否需要重启的状态
      */
     private fun refreshRestartState() {
         val state = xposedServiceManager.queryRestartState()

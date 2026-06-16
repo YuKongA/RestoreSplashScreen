@@ -3,7 +3,7 @@ package com.gswxxn.restoresplashscreen.repository
 import android.content.Context
 import android.net.Uri
 import com.gswxxn.restoresplashscreen.data.preference.Preferences
-import com.gswxxn.restoresplashscreen.utils.MLog
+import com.gswxxn.restoresplashscreen.utils.XMLog
 import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
 import dev.lackluster.hyperx.ui.layout.HyperXLayoutConfig
 import dev.lackluster.hyperx.ui.preference.core.PreferenceKey
@@ -59,7 +59,7 @@ class GlobalPreferencesRepository(
     }
 
     private fun initAndCheck() {
-        MLog.isDebugEnabled = prefStore.get(Preferences.Log.ENABLE_LOG)
+        XMLog.isDebugEnabled = prefStore.get(Preferences.Log.ENABLE_LOG)
 
         _uiConfigFlow.value = HyperXLayoutConfig(
             isSplitScreenEnabled = prefStore.get(Preferences.Module.SPLIT_VIEW),
@@ -82,7 +82,7 @@ class GlobalPreferencesRepository(
             Preferences.Module.SPLIT_VIEW -> _uiConfigFlow.update { it.copy(isSplitScreenEnabled = value as Boolean) }
             Preferences.Module.MODULE_APP_BLUR -> _uiConfigFlow.update { it.copy(isBlurEnabled = value as Boolean) }
 
-            Preferences.Log.ENABLE_LOG -> MLog.isDebugEnabled = (value as Boolean)
+            Preferences.Log.ENABLE_LOG -> XMLog.isDebugEnabled = (value as Boolean)
             // 其余仅需持久化的 Key 在第 1 步已写入 SP，Hook 端可直接读取，这里无需处理。
         }
     }

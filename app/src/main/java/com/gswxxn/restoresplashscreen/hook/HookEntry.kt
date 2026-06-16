@@ -3,9 +3,10 @@ package com.gswxxn.restoresplashscreen.hook
 import android.content.Context
 import com.gswxxn.restoresplashscreen.data.Scope
 import com.gswxxn.restoresplashscreen.data.preference.Preferences
+import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler
 import com.gswxxn.restoresplashscreen.hook.utils.RemotePreferences
 import com.gswxxn.restoresplashscreen.hook.utils.RemotePreferences.observe
-import com.gswxxn.restoresplashscreen.utils.MLog
+import com.gswxxn.restoresplashscreen.utils.XMLog
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface
 
@@ -28,9 +29,9 @@ class HookEntry : XposedModule() {
     private fun initModule(processName: String, isSystemServer: Boolean) {
         this.processName = processName
         this.isSystemServer = isSystemServer
-        MLog.init(this)
+        XMLog.init(this)
         RemotePreferences.init(this)
-        Preferences.Log.ENABLE_LOG.observe { MLog.isDebugEnabled = it }
+        Preferences.Log.ENABLE_LOG.observe { XMLog.isDebugEnabled = it }
     }
 
     override fun onSystemServerStarting(param: XposedModuleInterface.SystemServerStartingParam) {
@@ -53,7 +54,11 @@ class HookEntry : XposedModule() {
         val state = runCatching {
             when {
                 isSystemServer -> AndroidHooker.classLoader?.let { arrayOf<Any?>(it) }
-                processName == Scope.SYSTEM_UI -> arrayOf<Any?>(SystemUIHooker.classLoader, SystemUIHooker.appContext)
+                processName == Scope.SYSTEM_UI -> {
+                    GenerateHookHandler.cancelPendingDelays()
+                    arrayOf(SystemUIHooker.classLoader, SystemUIHooker.appContext)
+                }
+
                 else -> null
             }
         }.getOrNull() ?: return false
@@ -76,6 +81,7 @@ class HookEntry : XposedModule() {
         when {
             param.isSystemServer ->
                 (state.getOrNull(0) as? ClassLoader)?.let { AndroidHooker.init(this, it) }
+
             param.processName == Scope.SYSTEM_UI -> {
                 val classLoader = state.getOrNull(0) as? ClassLoader ?: return
                 val appContext = state.getOrNull(1) as? Context

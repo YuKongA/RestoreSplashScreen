@@ -4,7 +4,7 @@ import com.gswxxn.restoresplashscreen.data.preference.Preferences
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.utils.RemotePreferences.get
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
-import com.gswxxn.restoresplashscreen.utils.MLog
+import com.gswxxn.restoresplashscreen.utils.XMLog
 import dev.lackluster.hyperx.ui.preference.core.PreferenceKey
 
 /**
@@ -37,7 +37,7 @@ object HookExt {
         if (!Preferences.Log.ENABLE_LOG.get()) return
         if (System.currentTimeMillis() - Preferences.Log.ENABLE_LOG_TIMESTAMP.get() > 86400000) return
         val text = msg()
-        MLog.i { text }
+        XMLog.i { text }
     }
 
     /**

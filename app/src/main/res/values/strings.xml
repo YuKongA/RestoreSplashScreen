@@ -13,9 +13,8 @@
     <string name="xposed_framework_version">Activated by %s API %d</string>
     <string name="main_activity_hint">做出任何设置前，请确保模块已激活。\n修改设置后立即生效，无需重启。</string>
 
-    <string name="restart">重启</string>
     <string name="restart_title">重启提示</string>
-    <string name="restart_message">作用域未勾选「系统框架」时无需重启手机。</string>
+    <string name="restart_message">作用域未勾选「系统框架」时无需重启手机</string>
     <string name="reboot">重启手机</string>
     <string name="restart_system_ui">重启系统界面</string>
     <string name="hot_reload">执行热重载</string>
@@ -35,7 +34,6 @@
     <string name="background_settings">背景</string>
     <string name="display_settings">显示</string>
     <string name="dev_settings">开发者选项</string>
-    <string name="hook_info">Hook 信息</string>
 
     <string name="faq">常见问题</string>
     <string name="faq_url">https://gswxxn.coding.net/public/restoresplashscreen/faq/git</string>
@@ -173,6 +171,5 @@
     <string name="open_source_license">开放源代码许可</string>
 
     <!--开发者选项-->
-    <string name="dev_hook_info_empty">空</string>
     <string name="dev_icon_round_corner_rate">图标圆角率</string>
 </resources>

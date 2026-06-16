@@ -19,9 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -32,11 +30,11 @@ import com.gswxxn.restoresplashscreen.BuildConfig
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.Pages
 import com.gswxxn.restoresplashscreen.data.Route
+import com.gswxxn.restoresplashscreen.manager.XposedServiceManager
 import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.ui.MainActivity.Companion.androidRestartNeeded
 import com.gswxxn.restoresplashscreen.ui.MainActivity.Companion.moduleActive
 import com.gswxxn.restoresplashscreen.ui.MainActivity.Companion.systemUIRestartNeeded
-import com.gswxxn.restoresplashscreen.manager.XposedServiceManager
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.ui.page.data.ModulePreferenceRes
 import com.gswxxn.restoresplashscreen.ui.page.data.ModuleStatusType
@@ -53,18 +51,13 @@ import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.DropdownImpl
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.ListPopupColumn
-import top.yukonga.miuix.kmp.basic.ListPopupDefaults
-import top.yukonga.miuix.kmp.basic.PopupPositionProvider
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TextButton
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.extended.MoreCircle
+import top.yukonga.miuix.kmp.icon.extended.Close2
 import top.yukonga.miuix.kmp.overlay.OverlayDialog
-import top.yukonga.miuix.kmp.overlay.OverlayListPopup
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
 
@@ -79,7 +72,22 @@ fun MainPage() {
     HyperXPage(
         title = stringResource(R.string.app_name),
         navigationIcon = { },
-        actions = { PopUpMenu(navigator, dialogRestartVisibility) }
+        actions = {
+            IconButton(
+                modifier = Modifier
+                    .padding(end = 21.dp)
+                    .size(40.dp),
+                onClick = {
+                    dialogRestartVisibility.value = true
+                },
+                holdDownState = dialogRestartVisibility.value
+            ) {
+                Icon(
+                    imageVector = MiuixIcons.Close2,
+                    contentDescription = "Dialog"
+                )
+            }
+        }
     ) {
         item {
             TopCard()
@@ -204,80 +212,11 @@ private fun SettingItems(
                 )
             }
         }
+        ModuleSettingPreference(ModulePreferenceRes.About, navigator)
     }
 }
 
-/**
- * 右上角的弹出菜单
- */
-@Composable
-private fun PopUpMenu(
-    navigator: Navigator,
-    dialogRestartVisibility: MutableState<Boolean>
-) {
-    val hapticFeedback = LocalHapticFeedback.current
-    val showTopPopup = remember { mutableStateOf(false) }
-    // 菜单内容
-    val contextMenuItems = listOf(
-        stringResource(R.string.restart),
-        stringResource(R.string.about)
-    )
 
-    // 弹出菜单
-    OverlayListPopup(
-        show = showTopPopup.value,
-        popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-        alignment = PopupPositionProvider.Align.TopEnd,
-        onDismissRequest = {
-            showTopPopup.value = false
-        }
-    ) {
-        ListPopupColumn {
-            contextMenuItems.forEachIndexed { index, string ->
-                DropdownImpl(
-                    text = string,
-                    optionSize = contextMenuItems.size,
-                    isSelected = false,
-                    onSelectedIndexChange = {
-                        when (it) {
-                            0 -> {
-                                dialogRestartVisibility.value = true
-                            }
-
-                            1 -> {
-                                navigator.popUntil { route -> route is HyperXRoute.Main }
-                                navigator.push(Route.About)
-                            }
-                        }
-                        showTopPopup.value = false
-                    },
-                    index = index
-                )
-            }
-        }
-    }
-
-    // 未弹出时的按钮
-    IconButton(
-        modifier = Modifier
-            .padding(end = 21.dp)
-            .size(40.dp),
-        onClick = {
-            showTopPopup.value = true
-            hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-        },
-        holdDownState = showTopPopup.value
-    ) {
-        Icon(
-            imageVector = MiuixIcons.MoreCircle,
-            contentDescription = "Menu"
-        )
-    }
-}
-
-/**
- * 重启提示的 Dialog
- */
 @SuppressLint("LocalContextGetResourceValueCall")
 @Composable
 private fun RestartDialog(

@@ -6,9 +6,9 @@ import io.github.libxposed.api.XposedModule
 
 /**
  * 日志工具类
- * hook 进程内通过 [XposedModule.log] 写入框架日志，同时输出到 logcat。
+ * hook 进程内通过 [XposedModule.log] 写入框架日志，同时输出到 logcat
  */
-object MLog {
+object XMLog {
     const val DEFAULT_TAG = "RestoreSplashScreen"
 
     @Volatile
