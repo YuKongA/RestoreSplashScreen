@@ -1,5 +1,6 @@
 package com.gswxxn.restoresplashscreen.hook.utils
 
+import com.highcapable.kavaref.extension.makeAccessible
 import java.lang.reflect.Field
 import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
@@ -24,7 +25,7 @@ object ReflectCache {
         while (current != null) {
             try {
                 return current.getDeclaredField(name)
-                    .apply { isAccessible = true }
+                    .apply { makeAccessible() }
                     .also { fieldCache[FieldKey(clazz, name)] = it }
             } catch (_: NoSuchFieldException) {
                 current = current.superclass
@@ -39,7 +40,7 @@ object ReflectCache {
         var current: Class<*>? = clazz
         while (current != null) {
             current.declaredMethods.firstOrNull { it.name == name && it.parameterCount == paramCount }?.let {
-                it.isAccessible = true
+                it.makeAccessible()
                 methodCache[MethodKey(clazz, name, paramCount)] = it
                 return it
             }

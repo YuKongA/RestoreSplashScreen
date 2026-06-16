@@ -13,7 +13,9 @@ import com.gswxxn.restoresplashscreen.utils.MLog
 import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.kavaref.extension.toClass
 import io.github.libxposed.api.XposedInterface
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.lang.reflect.Method
@@ -30,6 +32,9 @@ object GenerateHookHandler : BaseHookHandler() {
     var currentActivityInfo = null as ActivityInfo?
     var exceptCurrentApp = false
     var isHooking = false
+
+    /** 延迟调用 removeStartingWindow 原方法 */
+    private val delayScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /**
      * 重置当前应用信息的缓存
@@ -140,7 +145,7 @@ object GenerateHookHandler : BaseHookHandler() {
     private fun delayCallOriginal(duration: Long, instance: Any?, args: Array<Any?>) {
         val method = resolveRemoveStartingWindowMethod()
         val argsCopy = args.copyOf()
-        MainScope().launch {
+        delayScope.launch {
             delay(duration.milliseconds)
             try {
                 if (method != null) {

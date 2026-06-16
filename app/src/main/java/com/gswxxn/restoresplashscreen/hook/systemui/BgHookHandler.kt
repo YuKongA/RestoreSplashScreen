@@ -8,12 +8,12 @@ import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.BaseHookHandler
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getMapPrefs
-import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
 import com.gswxxn.restoresplashscreen.hook.utils.ReflectCache
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
 import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.isDarkMode
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils
 import com.gswxxn.restoresplashscreen.wrapper.SplashScreenViewBuilderWrapper
 
@@ -58,8 +58,9 @@ object BgHookHandler : BaseHookHandler() {
             if (!isDarkMode) Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP
             else Preferences.AppList.INDIVIDUAL_BG_COLOR_APP_MAP_DARK
         )
+        val individualColor = individualBgColorAppMap[currentPackageName]
         val skipAppWithBgColor = bgColorType != 0 &&
-                currentPackageName !in individualBgColorAppMap.keys &&
+                individualColor == null &&
                 prefs.get(Preferences.Background.SKIP_APP_WITH_BG_COLOR) &&
                 (ReflectCache.getField<Int>(mTmpAttrsInstance!!, "mWindowBgColor") ?: 0) != 0
 
@@ -68,25 +69,27 @@ object BgHookHandler : BaseHookHandler() {
             return null
         }
 
-        return if (currentPackageName in individualBgColorAppMap.keys) {
-            printLog { "SplashScreenViewBuilder(): set individual background color, ${individualBgColorAppMap[currentPackageName]}" }
-            individualBgColorAppMap[currentPackageName]?.toColorInt()
+        return if (individualColor != null) {
+            printLog { "SplashScreenViewBuilder(): set individual background color, $individualColor" }
+            individualColor.toColorInt()
         } else if (!isInBGExceptList && (!isDarkMode || ignoreDarkMode))
             when (bgColorType) {
                 // 从图标取色
                 ChangeBGColorTypes.FromIcon.ordinal -> {
                     printLog { "SplashScreenViewBuilder(): get adaptive background color" }
-                    IconHookHandler.currentIconDominantColor ?: ReflectCache.getField<Drawable>(mTmpAttrsInstance!!, "mSplashScreenIcon")?.let { drawable ->
-                            val bitmap = GraphicUtils.drawable2Bitmap(drawable, 100)
-                            GraphicUtils.getBgColor(
-                                bitmap,
-                                when (bgColorMode) {
-                                    BGColorModes.DarkColor.ordinal -> false
-                                    BGColorModes.FollowSystem.ordinal -> !isDarkMode
-                                    else -> true
-                                }
-                            )
-                        }
+                    IconHookHandler.currentIconDominantColor
+                        ?: ReflectCache.getField<Drawable>(mTmpAttrsInstance!!, "mSplashScreenIcon")
+                            ?.let { drawable ->
+                                val bitmap = GraphicUtils.drawable2Bitmap(drawable, 100)
+                                GraphicUtils.getBgColor(
+                                    bitmap,
+                                    when (bgColorMode) {
+                                        BGColorModes.DarkColor.ordinal -> false
+                                        BGColorModes.FollowSystem.ordinal -> !isDarkMode
+                                        else -> true
+                                    }
+                                )
+                            }
                 }
                 // 从壁纸取色
                 ChangeBGColorTypes.FromMonet.ordinal -> {
