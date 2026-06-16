@@ -3,7 +3,7 @@ package com.gswxxn.restoresplashscreen.data.preference
 import dev.lackluster.hyperx.ui.preference.core.PreferenceKey
 
 /**
- * 模块远程 SharedPreferences 的键值定义。
+ * 模块远程 SharedPreferences 的键值定义
  */
 object Preferences {
     const val NAME = "config"
@@ -12,7 +12,7 @@ object Preferences {
     /** 备份时需要忽略的键，暂时为空。 */
     val BACKUP_BLACKLIST: List<String> by lazy { emptyList() }
 
-    /** 日志 / 调试相关 */
+    /** 调试相关 */
     object Log {
         val ENABLE_LOG = PreferenceKey("enable_log", false)
         val ENABLE_LOG_TIMESTAMP = PreferenceKey("enable_log_timestamp", 0L)
@@ -30,12 +30,12 @@ object Preferences {
     /** 图标相关 */
     object Icon {
         val REPLACE_TO_EMPTY_SPLASH_SCREEN = PreferenceKey("replace_to_empty_splash_screen", false)
-        // 忽略应用主动设置的图标
         val ENABLE_DEFAULT_STYLE = PreferenceKey("enable_default_style", false)
         val ENABLE_HIDE_SPLASH_SCREEN_ICON = PreferenceKey("enable_hide_splash_screen_icon", false)
         val ENABLE_HIDE_ICON = PreferenceKey("enable_hide_icon", false)
         val ENABLE_REPLACE_ICON = PreferenceKey("enable_replace_icon", false)
         val ENABLE_USE_MIUI_LARGE_ICON = PreferenceKey("enable_use_miui_large_icon", false)
+        val ENABLE_REMOVE_ICON_STROKE = PreferenceKey("enable_remove_icon_stroke", false)
         val ENABLE_ADD_ICON_BLUR_BG = PreferenceKey("enable_add_blur_bg", false)
         val ICON_PACK_PACKAGE_NAME = PreferenceKey("icon_pack_package_name", "None")
         val SHRINK_ICON = PreferenceKey("shrink_icon", 0)
@@ -52,7 +52,7 @@ object Preferences {
         val CHANG_BG_COLOR_TYPE = PreferenceKey("change_bg_color_type", 0)
     }
 
-    /** 显示 / 行为相关 */
+    /** 显示相关 */
     object Display {
         val REMOVE_BRANDING_IMAGE = PreferenceKey("remove_branding_image", false)
         val REDUCE_SPLASH_SCREEN = PreferenceKey("reduce_splash_screen", true)
@@ -64,13 +64,11 @@ object Preferences {
         val MIN_DURATION = PreferenceKey("min_duration", 0)
     }
 
-    /** 应用列表（StringSet） */
+    /** 应用列表相关 */
     object AppList {
         val CUSTOM_SCOPE_LIST = PreferenceKey("custom_scope_list", emptySet<String>())
-        // 忽略应用主动设置的图标 应用列表
         val DEFAULT_STYLE_LIST = PreferenceKey("default_style_list", emptySet<String>())
         val HIDE_SPLASH_SCREEN_ICON_LIST = PreferenceKey("hide_splash_screen_icon_list", emptySet<String>())
-        // 自适应背景颜色排除列表
         val BG_EXCEPT_LIST = PreferenceKey("bg_except_list", emptySet<String>())
         val REMOVE_BRANDING_IMAGE_LIST = PreferenceKey("remove_branding_image_list", emptySet<String>())
         val FORCE_SHOW_SPLASH_SCREEN_LIST = PreferenceKey("force_show_splash_screen_list", emptySet<String>())
@@ -86,7 +84,7 @@ object Preferences {
         val DEV_ICON_ROUND_CORNER_RATE = PreferenceKey("dev_icon_round_corner", 25)
     }
 
-    /** 模块应用（UI）设置 */
+    /** 模块应用设置 */
     object Module {
         val MODULE_APP_BLUR = PreferenceKey("module_blur", true)
         val SPLIT_VIEW = PreferenceKey("module_split", false)

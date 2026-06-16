@@ -36,6 +36,7 @@ import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils
 import com.gswxxn.restoresplashscreen.utils.IconPackManager
 import com.gswxxn.restoresplashscreen.utils.MIUIIconsHelper
+import com.gswxxn.restoresplashscreen.wrapper.NoStrokeAdaptiveIconDrawable
 import com.gswxxn.restoresplashscreen.wrapper.TransparentAdaptiveIconDrawable
 import com.highcapable.kavaref.KavaRef.Companion.resolve
 import com.highcapable.kavaref.extension.classOf
@@ -51,7 +52,7 @@ object IconHookHandler : BaseHookHandler() {
     /**
      * currentUseBigHyperOSLagerIcon 有三种状态:
      *
-     * null: 当前没有使用 HyperOS 大图标
+     * null: 当前没有使用小米大图标
      * true: 当前使用 1x2 或 2x1 或 2x2 的图标
      * false: 当前使用 1x1 的图标
      *
@@ -160,7 +161,7 @@ object IconHookHandler : BaseHookHandler() {
                 }
             }
 
-            // 绘制圆角（如果使用 HyperOS 大图标, 则不绘制圆角）
+            // 绘制圆角（如果使用小米大图标, 则不绘制圆角）
             if (!prefs.get(Preferences.Display.ENABLE_DRAW_ROUND_CORNER) || currentUseBigHyperOSLagerIcon != true) {
                 return@addAfterHook
             }
@@ -270,8 +271,9 @@ object IconHookHandler : BaseHookHandler() {
             return Color.TRANSPARENT.toDrawable()
         }
 
-        // 检索图标优先级: 使用 HyperOS 大图标 -> 使用图标包 -> 替换获取图标方式 -> 原始图标
+        // 检索图标优先级: 使用小米大图标 -> 使用图标包 -> 替换获取图标方式 -> 原始图标
         val iconDrawable = getHyperOSLargeIcon() ?: getIconFromIconPack() ?: replaceWayOfGetIcons() ?: oriDrawable
+
         // 判断是否需要缩小图标
         when (shrinkIconType) {
             ShrinkIconType.NotShrinkIcon.ordinal -> currentIsNeedShrinkIcon = false
@@ -296,8 +298,16 @@ object IconHookHandler : BaseHookHandler() {
             )
         }
 
-        currentIconDrawable = iconDrawable
-        return iconDrawable
+        // 移除 HyperOS 为自适应图标强制添加的边缘描边
+        val finalIconDrawable =
+            if (isHyperOS && iconDrawable is AdaptiveIconDrawable && prefs.get(Preferences.Icon.ENABLE_REMOVE_ICON_STROKE)) {
+                printLog { "getIcon(): remove icon stroke" }
+                NoStrokeAdaptiveIconDrawable.from(iconDrawable)
+            } else {
+                iconDrawable
+            }
+        currentIconDrawable = finalIconDrawable
+        return finalIconDrawable
     }
 
     /**
@@ -313,7 +323,7 @@ object IconHookHandler : BaseHookHandler() {
         else mIconSize
     }
 
-    /** 使用 HyperOS 大图标 */
+    /** 使用小米大图标 */
     private fun getHyperOSLargeIcon(): Drawable? {
         if (isHyperOS && prefs.get(Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON) && miuiIcons.hasLargeIcon(currentPackageName)) {
             printLog { "getIcon(): use MIUI Large Icon" }

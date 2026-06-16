@@ -17,7 +17,7 @@ class SplashScreenViewBuilderWrapper private constructor(private val builder: An
          * @throws IllegalArgumentException 传入的 builder 不是 SplashScreenView.Builder 实例时
          */
         fun getInstance(builder: Any): SplashScreenViewBuilderWrapper {
-            if (builder.javaClass.name != "android.window.SplashScreenView\$Builder") {
+            if (builder.javaClass.name != $$"android.window.SplashScreenView$Builder") {
                 throw IllegalArgumentException("Builder must be of type SplashScreenViewBuilder")
             }
 

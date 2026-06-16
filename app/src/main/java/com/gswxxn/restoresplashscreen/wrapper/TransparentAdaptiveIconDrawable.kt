@@ -9,16 +9,16 @@ import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.Shader
 import android.graphics.drawable.AdaptiveIconDrawable
-import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
+import androidx.core.graphics.drawable.toDrawable
 import com.gswxxn.restoresplashscreen.hook.utils.ReflectCache
 
 /**
- * 透明背景的 AdaptiveIconDrawable
+ * 用于 HyperOS 的透明背景 AdaptiveIconDrawable
  */
 class TransparentAdaptiveIconDrawable(
     foregroundDrawable: Drawable
-) : AdaptiveIconDrawable(ColorDrawable(Color.TRANSPARENT), foregroundDrawable) {
+) : AdaptiveIconDrawable(Color.TRANSPARENT.toDrawable(), foregroundDrawable) {
     private var mLayersShader: Shader?
         get() = ReflectCache.getField(this, "mLayersShader")
         set(value) {
