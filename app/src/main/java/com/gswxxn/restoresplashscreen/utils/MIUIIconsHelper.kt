@@ -20,16 +20,21 @@ import com.highcapable.kavaref.extension.toClassOrNull
 
 /**
  * 用于从小米桌面检索大图标的辅助类
+ *
+ * 仅在首次调用 hasLargeIcon / getLargeIconSize / getLargeIconDrawable 时才触发
  */
 @SuppressLint("DiscouragedApi")
 class MIUIIconsHelper(private val context: Context, private val classLoader: ClassLoader) {
-    private val miuiHomeContext = context.createPackageContext(
-        "com.miui.home",
-        Context.CONTEXT_INCLUDE_CODE or Context.CONTEXT_IGNORE_SECURITY
-    )
+    private val miuiHomeContext by lazy {
+        context.createPackageContext(
+            "com.miui.home",
+            Context.CONTEXT_INCLUDE_CODE or Context.CONTEXT_IGNORE_SECURITY
+        )
+    }
 
-    private val largeIconsHelperClazz =
+    private val largeIconsHelperClazz by lazy {
         "com.miui.maml.util.LargeIconsHelper".toClass(loader = miuiHomeContext.classLoader)
+    }
 
     private val dependencyClazz by lazy {
         "com.miui.systemui.MiuiDependency".toClassOrNull(loader = classLoader)
@@ -89,44 +94,52 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
         Settings.System.getInt(context.contentResolver, "key_miui_mod_icon_enable", 0) == 1 || getFancyChildOrSelf != null
     }
 
-    init {
-        // 防止获取到 System UI 的 Resources
-        HookManager(true) {
-            "miuix.pickerwidget.date.CalendarFormatSymbols".toClassOrNull(loader = miuiHomeContext.classLoader)
-                ?.resolve()?.optional()?.firstMethodOrNull { name = "getWeekDays" }?.self
-        }.addReplaceHook({ true }) {
-            val resources = miuiHomeContext.resources
-            val id = resources.getIdentifier("week_days", "array", "com.miui.home")
-            resources.getStringArray(id)
-        }.startHook(SystemUIHooker.module)
+    private var hooksInstalled = false
 
-        // 为获取完美图标时设置一个缓存时间, 避免获取费时图标(如天气)时, 经常显示不出数据的问题 原调用为固定值 0.
-        HookManager(true) {
-            "com.miui.maml.util.AppIconsHelper".toClassOrNull(loader = miuiHomeContext.classLoader)
-                ?.resolve()?.optional()?.firstMethodOrNull { name = "getFancyIconDrawable" }?.self
-        }.addBeforeHook({ true }) {
-            val packageName = args(args.indexOfFirst { it is String }).string()
-            val cacheTimeIndex = args.indexOfFirst { it is Long }
-            args(cacheTimeIndex).set(getCacheTime(packageName))
-        }.startHook(SystemUIHooker.module)
+    private fun ensureHooksInstalled() {
+        if (hooksInstalled) return
+        hooksInstalled = true
+        try {
+            // 防止获取到 System UI 的 Resources
+            HookManager(true) {
+                "miuix.pickerwidget.date.CalendarFormatSymbols".toClassOrNull(loader = miuiHomeContext.classLoader)
+                    ?.resolve()?.optional()?.firstMethodOrNull { name = "getWeekDays" }?.self
+            }.addReplaceHook({ true }) {
+                val resources = miuiHomeContext.resources
+                val id = resources.getIdentifier("week_days", "array", "com.miui.home")
+                resources.getStringArray(id)
+            }.startHook(SystemUIHooker.module)
 
-        // 只获取本地天气数据, 不获取网络数据; 参考 https://zhuti.designer.xiaomi.com/docs/blog/weatherApi.html
-        HookManager(true) {
-            "com.miui.maml.data.ContentProviderBinder".toClassOrNull(loader = miuiHomeContext.classLoader)
-                ?.resolve()?.optional()?.firstMethodOrNull { name = "getUriText" }?.self
-        }.addAfterHook({ true }) {
-            if (result == "content://weather/actualWeatherData/1")
-                result = "content://weather/actualWeatherData/2"
-        }.startHook(SystemUIHooker.module)
+            // 为获取完美图标时设置一个缓存时间, 避免获取费时图标(如天气)时, 经常显示不出数据的问题 原调用为固定值 0.
+            HookManager(true) {
+                "com.miui.maml.util.AppIconsHelper".toClassOrNull(loader = miuiHomeContext.classLoader)
+                    ?.resolve()?.optional()?.firstMethodOrNull { name = "getFancyIconDrawable" }?.self
+            }.addBeforeHook({ true }) {
+                val packageName = args(args.indexOfFirst { it is String }).string()
+                val cacheTimeIndex = args.indexOfFirst { it is Long }
+                args(cacheTimeIndex).set(getCacheTime(packageName))
+            }.startHook(SystemUIHooker.module)
 
-        // 由于大图标的变更通知不到系统界面, 所以只能每次都重新读取配置
-        HookManager(true) {
-            "com.miui.maml.util.LargeIconsHelper".toClassOrNull(loader = miuiHomeContext.classLoader)
-                ?.resolve()?.optional()?.firstMethodOrNull { name = "hasLargeIcon" }?.self
-        }.addBeforeHook({ true }) {
-            largeIconsHelperClazz.resolve().optional().firstFieldOrNull { name = "sManagerList" }
-                ?.setValueTo(null, null)
-        }.startHook(SystemUIHooker.module)
+            // 只获取本地天气数据, 不获取网络数据; 参考 https://zhuti.designer.xiaomi.com/docs/blog/weatherApi.html
+            HookManager(true) {
+                "com.miui.maml.data.ContentProviderBinder".toClassOrNull(loader = miuiHomeContext.classLoader)
+                    ?.resolve()?.optional()?.firstMethodOrNull { name = "getUriText" }?.self
+            }.addAfterHook({ true }) {
+                if (result == "content://weather/actualWeatherData/1")
+                    result = "content://weather/actualWeatherData/2"
+            }.startHook(SystemUIHooker.module)
+
+            // 由于大图标的变更通知不到系统界面, 所以只能每次都重新读取配置
+            HookManager(true) {
+                "com.miui.maml.util.LargeIconsHelper".toClassOrNull(loader = miuiHomeContext.classLoader)
+                    ?.resolve()?.optional()?.firstMethodOrNull { name = "hasLargeIcon" }?.self
+            }.addBeforeHook({ true }) {
+                largeIconsHelperClazz.resolve().optional().firstFieldOrNull { name = "sManagerList" }
+                    ?.setValueTo(null, null)
+            }.startHook(SystemUIHooker.module)
+        } catch (t: Throwable) {
+            XMLog.e(t, "MIUIIconsHelper")
+        }
     }
 
     /**
@@ -136,6 +149,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
      * @return 如果程序包有大图标则返回 `true`，否则返回 `false`。
      */
     fun hasLargeIcon(packageName: String) = try {
+        ensureHooksInstalled()
         largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
             name = "hasLargeIcon"
             parameters(String::class, String::class, String::class, UserHandle::class)
@@ -158,6 +172,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
      * @return 如果成功获取大图标的尺寸则返回该尺寸，否则在捕获异常后返回null。
      */
     fun getLargeIconSize(packageName: String) = try {
+        ensureHooksInstalled()
         val iconsConfigs = largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
             name = "getLargeIconConfigFile"
             parameters(String::class, Boolean::class)
@@ -169,7 +184,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
             config.javaClass.resolve().optional().firstFieldOrNull { name = "size" }?.getValueFrom<Any, String>(config)
         }
     } catch (e: Throwable) {
-        XMLog.e(t = e) { "Failed to get hasLargeIcon for package $packageName" }
+        XMLog.e(t = e) { "Failed to get large icon size for package $packageName" }
         null
     }
 
@@ -180,6 +195,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
      * @return 原始大图标可绘制对象，如果未找到则为 null
      */
     fun getLargeIconDrawable(packageName: String) = try {
+        ensureHooksInstalled()
         largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
             name = "getLargeIconDrawable"
             parameters(Context::class, String::class, String::class, String::class, String::class, Long::class, UserHandle::class)
