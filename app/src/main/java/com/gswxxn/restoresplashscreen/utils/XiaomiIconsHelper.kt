@@ -23,8 +23,7 @@ import com.highcapable.kavaref.extension.toClassOrNull
  *
  * 仅在首次调用 hasLargeIcon / getLargeIconSize / getLargeIconDrawable 时才触发
  */
-@SuppressLint("DiscouragedApi")
-class MIUIIconsHelper(private val context: Context, private val classLoader: ClassLoader) {
+class XiaomiIconsHelper(private val context: Context, private val classLoader: ClassLoader) {
     private val miuiHomeContext by lazy {
         context.createPackageContext(
             "com.miui.home",
@@ -96,6 +95,7 @@ class MIUIIconsHelper(private val context: Context, private val classLoader: Cla
 
     private var hooksInstalled = false
 
+    @SuppressLint("DiscouragedApi")
     private fun ensureHooksInstalled() {
         if (hooksInstalled) return
         hooksInstalled = true

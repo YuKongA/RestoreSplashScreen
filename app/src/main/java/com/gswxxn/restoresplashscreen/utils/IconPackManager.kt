@@ -1,11 +1,13 @@
 package com.gswxxn.restoresplashscreen.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
+import androidx.core.content.res.ResourcesCompat
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserException
 import org.xmlpull.v1.XmlPullParserFactory
@@ -25,6 +27,7 @@ class IconPackManager(private val mContext: Context, private val packageName: St
     private var totalIcons = 0
     private var iconPackRes: Resources? = null
 
+    @SuppressLint("DiscouragedApi")
     private fun load() {
         // load appfilter.xml from the icon pack package
         val pm = mContext.packageManager
@@ -42,8 +45,8 @@ class IconPackManager(private val mContext: Context, private val packageName: St
                     factory.isNamespaceAware = true
                     xpp = factory.newPullParser()
                     xpp.setInput(appFilterStream, "utf-8")
-                } catch (e: IOException) {
-                    //Ln.d("No appfilter.xml file");
+                } catch (_: IOException) {
+                    //XMLog.d { "No appfilter.xml file" }
                 }
             }
             if (xpp != null) {
@@ -70,19 +73,20 @@ class IconPackManager(private val mContext: Context, private val packageName: St
                 }
             }
             mLoaded = true
-        } catch (e: PackageManager.NameNotFoundException) {
-            //Ln.d("Cannot load icon pack");
-        } catch (e: XmlPullParserException) {
-            //Ln.d("Cannot parse icon pack appfilter.xml");
+        } catch (_: PackageManager.NameNotFoundException) {
+            //XMLog.d { "Cannot load icon pack" }
+        } catch (_: XmlPullParserException) {
+            //XMLog.d { "Cannot parse icon pack appfilter.xml" }
         } catch (e: IOException) {
             e.printStackTrace()
         }
     }
 
+    @SuppressLint("DiscouragedApi")
     private fun loadDrawable(drawableName: String): Drawable? {
         val id = iconPackRes!!.getIdentifier(drawableName, "drawable", packageName)
         if (id > 0) {
-            return iconPackRes!!.getDrawable(id, mContext.theme)
+            return ResourcesCompat.getDrawable(iconPackRes!!, id, mContext.theme)
         }
         return null
     }
@@ -93,6 +97,7 @@ class IconPackManager(private val mContext: Context, private val packageName: St
      * @param appPackageName 需要获取图标的应用包名
      * @return [Drawable]
      */
+    @SuppressLint("DiscouragedApi")
     fun getIconByPackageName(appPackageName: String?): Drawable? {
         if (!mLoaded) load()
         if (iconPackRes == null) return null
@@ -144,26 +149,18 @@ class IconPackManager(private val mContext: Context, private val packageName: St
      */
     fun getAvailableIconPacks(): Map<String, String> {
         val iconPacks = mutableMapOf("None" to "None")
-
-        // find apps with intent-filter "com.gau.go.launcherex.theme" and return build the HashMap
         val pm = mContext.packageManager
-        val adwLauncherThemes = pm.queryIntentActivities(
-            Intent("org.adw.launcher.THEMES"),
-            PackageManager.GET_META_DATA
-        )
-        val goLauncherThemes = pm.queryIntentActivities(
-            Intent("com.gau.go.launcherex.theme"),
-            PackageManager.GET_META_DATA
-        )
 
-        // merge those lists
-        val rInfo: MutableList<ResolveInfo> = ArrayList(adwLauncherThemes)
-        rInfo.addAll(goLauncherThemes)
+        val rInfo: List<ResolveInfo> = ICON_PACK_ACTIONS.flatMap { action ->
+            pm.queryIntentActivities(Intent(action), PackageManager.GET_META_DATA)
+        }
+
         for (ri in rInfo) {
             val packageName = ri.activityInfo.packageName
+            if (iconPacks.containsKey(packageName)) continue   // 去重
             try {
                 val ai = pm.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
-                val appName = mContext.packageManager.getApplicationLabel(ai).toString()
+                val appName = pm.getApplicationLabel(ai).toString()
                 iconPacks += packageName to appName
             } catch (e: PackageManager.NameNotFoundException) {
                 // shouldn't happen
@@ -171,5 +168,37 @@ class IconPackManager(private val mContext: Context, private val packageName: St
             }
         }
         return iconPacks
+    }
+
+    companion object {
+        /** 图标包 action 兜底 */
+        private val ICON_PACK_ACTIONS = listOf(
+            "org.adw.launcher.THEMES",
+            "org.adw.launcher.icons.ACTION_PICK_ICON",
+            "com.anddoes.launcher.THEME",
+            "com.dlto.atom.launcher.THEME",
+            "com.gau.go.launcherex.theme",
+            "com.zeroteam.zerolauncher.theme",
+            "com.fede.launcher.THEME_ICONPACK",
+            "com.gtp.nextlauncher.theme",
+            "com.gridappsinc.launcher.theme.apk_action",
+            "com.teslacoilsw.launcher.THEME",
+            "com.novalauncher.THEME",
+            "ch.deletescape.lawnchair.ICONPACK",
+            "com.lge.launcher2.THEME",
+            "net.oneplus.launcher.icons.ACTION_PICK_ICON",
+            "com.spocky.projengmenu.icons.ACTION_PICK_ICON",
+            "ginlemon.smartlauncher.THEMES",
+            "home.solo.launcher.free.THEMES",
+            "home.solo.launcher.free.ACTION_ICON",
+            "com.sonymobile.home.ICON_PACK",
+            "com.tsf.shell.themes",
+            "com.phonemetra.turbo.launcher.THEMES",
+            "com.phonemetra.turbo.launcher.icons.ACTION_PICK_ICON",
+            "mobi.bbase.ahome.THEME",
+            "com.rogro.GDE.THEME.1",
+            "com.android.dxtop.launcher.THEME",
+            "cdproductions.crazyicons.TWO"
+        )
     }
 }

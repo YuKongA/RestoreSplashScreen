@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,16 +23,18 @@ import com.gswxxn.restoresplashscreen.ui.component.SwitchPreference
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.ui.page.data.ShrinkIconType
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toast
+import com.gswxxn.restoresplashscreen.utils.DeviceUtils
 import com.gswxxn.restoresplashscreen.utils.IconPackManager
 import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
-import com.gswxxn.restoresplashscreen.utils.DeviceUtils
 import dev.lackluster.hyperx.navigation.LocalNavigator
-import org.koin.compose.koinInject
 import dev.lackluster.hyperx.navigation.Navigator
 import dev.lackluster.hyperx.ui.layout.HyperXPage
 import dev.lackluster.hyperx.ui.preference.DropDownEntry
 import dev.lackluster.hyperx.ui.preference.ItemPosition
 import dev.lackluster.hyperx.ui.preference.PreferenceGroup
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 
 /**
  * 图标 界面
@@ -78,19 +79,19 @@ private fun CommonSettingsGroup() {
 
     // 图标包列表预处理
     val selectedIconPackIndex = remember { mutableIntStateOf(0) }
-    val availableIconPackItems = remember {
-        mutableStateListOf(
-            DropDownEntry(value = 0, title = "None", summary = "None")
-        )
+    var availableIconPackItems by remember {
+        mutableStateOf(listOf(DropDownEntry(value = 0, title = "None", summary = "None")))
     }
     LaunchedEffect(Unit) {
-        availableIconPackItems.addAll(
+        val packs = withContext(Dispatchers.IO) {
             IconPackManager(context).getAvailableIconPacks()
                 .filter { it.key != "None" }
-                .map { (packageName, iconPackName) ->
-                    DropDownEntry(value = availableIconPackItems.size, title = iconPackName, summary = packageName)
+                .toList()
+                .mapIndexed { index, (packageName, iconPackName) ->
+                    DropDownEntry(value = index + 1, title = iconPackName, summary = packageName)
                 }
-        )
+        }
+        availableIconPackItems = listOf(DropDownEntry(value = 0, title = "None", summary = "None")) + packs
         selectedIconPackIndex.intValue = availableIconPackItems.indexOfFirst {
             it.summary == store.get(Preferences.Icon.ICON_PACK_PACKAGE_NAME)
         }.takeIf { it != -1 } ?: run {

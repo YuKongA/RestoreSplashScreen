@@ -34,7 +34,7 @@ import com.gswxxn.restoresplashscreen.utils.CommonUtils.isDarkMode
 import com.gswxxn.restoresplashscreen.utils.DeviceUtils.isHyperOS
 import com.gswxxn.restoresplashscreen.utils.GraphicUtils
 import com.gswxxn.restoresplashscreen.utils.IconPackManager
-import com.gswxxn.restoresplashscreen.utils.MIUIIconsHelper
+import com.gswxxn.restoresplashscreen.utils.XiaomiIconsHelper
 import com.gswxxn.restoresplashscreen.wrapper.NoStrokeAdaptiveIconDrawable
 import com.gswxxn.restoresplashscreen.wrapper.TransparentAdaptiveIconDrawable
 import com.highcapable.kavaref.KavaRef.Companion.resolve
@@ -69,7 +69,7 @@ object IconHookHandler : BaseHookHandler() {
     }
 
     private val iconPackManager by lazy { IconPackManager(appContext!!, prefs.get(Preferences.Icon.ICON_PACK_PACKAGE_NAME)) }
-    private val miuiIcons by lazy { MIUIIconsHelper(appContext!!, appClassLoader) }
+    private val miuiIcons by lazy { XiaomiIconsHelper(appContext!!, appClassLoader) }
 
     /**
      * 重置当前应用的属性
