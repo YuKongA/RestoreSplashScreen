@@ -10,6 +10,7 @@ import android.provider.Settings
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
 import com.gswxxn.restoresplashscreen.hook.base.HookManager
 import com.gswxxn.restoresplashscreen.hook.systemui.IconHookHandler.getActivityIconOrApp
+import com.gswxxn.restoresplashscreen.hook.utils.ReflectCache
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
 import com.gswxxn.restoresplashscreen.hook.utils.setValueTo
 import com.gswxxn.restoresplashscreen.hook.utils.toTyped
@@ -93,6 +94,38 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
         Settings.System.getInt(context.contentResolver, "key_miui_mod_icon_enable", 0) == 1 || getFancyChildOrSelf != null
     }
 
+    // 以下成员进程内恒定, 解析一次复用; hasLargeIcon / getLargeIconSize / getLargeIconDrawable
+    // 每次应用启动都会调用, 不能在方法体内重复做全表反射扫描
+
+    private val userHandleCurrent by lazy {
+        classOf<UserHandle>().resolve().firstField { name = "CURRENT" }.getValueFrom<UserHandle, Any>(null)
+    }
+
+    private val hasLargeIconMethod by lazy {
+        largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
+            name = "hasLargeIcon"
+            parameters(String::class, String::class, String::class, UserHandle::class)
+        }?.toTyped<Boolean>()
+    }
+
+    private val getLargeIconConfigFileMethod by lazy {
+        largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
+            name = "getLargeIconConfigFile"
+            parameters(String::class, Boolean::class)
+        }?.toTyped<Any>()
+    }
+
+    private val getLargeIconDrawableMethod by lazy {
+        largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
+            name = "getLargeIconDrawable"
+            parameters(Context::class, String::class, String::class, String::class, String::class, Long::class, UserHandle::class)
+        }?.toTyped<Any>()
+    }
+
+    private val sManagerListField by lazy {
+        largeIconsHelperClazz.resolve().optional().firstFieldOrNull { name = "sManagerList" }
+    }
+
     private var hooksInstalled = false
 
     @SuppressLint("DiscouragedApi")
@@ -134,8 +167,7 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
                 "com.miui.maml.util.LargeIconsHelper".toClassOrNull(loader = miuiHomeContext.classLoader)
                     ?.resolve()?.optional()?.firstMethodOrNull { name = "hasLargeIcon" }?.self
             }.addBeforeHook({ true }) {
-                largeIconsHelperClazz.resolve().optional().firstFieldOrNull { name = "sManagerList" }
-                    ?.setValueTo(null, null)
+                sManagerListField?.setValueTo(null, null)
             }.startHook(SystemUIHooker.module)
         } catch (t: Throwable) {
             XMLog.e(t, "MIUIIconsHelper")
@@ -150,16 +182,7 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
      */
     fun hasLargeIcon(packageName: String) = try {
         ensureHooksInstalled()
-        largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
-            name = "hasLargeIcon"
-            parameters(String::class, String::class, String::class, UserHandle::class)
-        }?.toTyped<Boolean>()?.invoke(
-            null,
-            packageName,
-            null,
-            "desktop",
-            classOf<UserHandle>().resolve().firstField { name = "CURRENT" }.getValueFrom<UserHandle, Any>(null)
-        ) ?: false
+        hasLargeIconMethod?.invoke(null, packageName, null, "desktop", userHandleCurrent) ?: false
     } catch (e: Throwable) {
         XMLog.e(t = e) { "Failed to get hasLargeIcon for package $packageName" }
         false
@@ -173,15 +196,11 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
      */
     fun getLargeIconSize(packageName: String) = try {
         ensureHooksInstalled()
-        val iconsConfigs = largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
-            name = "getLargeIconConfigFile"
-            parameters(String::class, Boolean::class)
-        }?.toTyped<Any>()?.invoke(null, "desktop", false)?.let { configFile ->
-            configFile.javaClass.resolve().optional().firstMethodOrNull { name = "getIconsConfigs" }
-                ?.toTyped<HashMap<String, Any>>()?.invoke(configFile)
+        val iconsConfigs = getLargeIconConfigFileMethod?.invoke(null, "desktop", false)?.let { configFile ->
+            ReflectCache.invokeMethod<HashMap<String, Any>>(configFile, "getIconsConfigs")
         }
         iconsConfigs?.get(packageName)?.let { config ->
-            config.javaClass.resolve().optional().firstFieldOrNull { name = "size" }?.getValueFrom<Any, String>(config)
+            ReflectCache.getField<String>(config, "size")
         }
     } catch (e: Throwable) {
         XMLog.e(t = e) { "Failed to get large icon size for package $packageName" }
@@ -196,21 +215,10 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
      */
     fun getLargeIconDrawable(packageName: String) = try {
         ensureHooksInstalled()
-        largeIconsHelperClazz.resolve().optional().firstMethodOrNull {
-            name = "getLargeIconDrawable"
-            parameters(Context::class, String::class, String::class, String::class, String::class, Long::class, UserHandle::class)
-        }?.toTyped<Any>()?.invoke(
-            null,
-            miuiHomeContext,
-            packageName,
-            null,
-            "desktop",
-            null,
-            0L,
-            classOf<UserHandle>().resolve().firstField { name = "CURRENT" }.getValueFrom<UserHandle, Any>(null)
+        getLargeIconDrawableMethod?.invoke(
+            null, miuiHomeContext, packageName, null, "desktop", null, 0L, userHandleCurrent
         )?.let { largeIcon ->
-            largeIcon.javaClass.resolve().optional().firstMethodOrNull { name = "getDrawable" }
-                ?.toTyped<Drawable>()?.invoke(largeIcon)
+            ReflectCache.invokeMethod<Drawable>(largeIcon, "getDrawable")
         }
     } catch (e: Throwable) {
         XMLog.e(t = e) { "Failed to get large icon drawable for package $packageName" }

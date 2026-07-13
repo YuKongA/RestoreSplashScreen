@@ -17,7 +17,6 @@ dependencyResolutionManagement {
         mavenCentral()
         maven("https://api.xposed.info/")
         maven("https://jitpack.io")
-        // com.github.promeg:tinypinyin（hyperx-compose 依赖，仅 jcenter 镜像提供）
         maven("https://maven.aliyun.com/repository/public")
     }
 }

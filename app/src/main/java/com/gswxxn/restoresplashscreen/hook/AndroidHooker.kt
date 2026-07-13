@@ -24,6 +24,13 @@ object AndroidHooker {
 
         val activityRecordClass = "com.android.server.wm.ActivityRecord".toClass(loader = classLoader)
 
+        // launchedFromSystemSurface 进程内恒定, 解析一次复用; 下方 hook 每次 activity 启动都会执行,
+        // 不能在 hook 体内做全表反射扫描
+        val launchedFromSystemSurface = activityRecordClass.resolve().optional().firstMethodOrNull {
+            name = "launchedFromSystemSurface"
+            parameterCount = 0
+        }?.toTyped<Boolean>()
+
         /**
          * 强制显示遮罩
          *
@@ -38,16 +45,14 @@ object AndroidHooker {
             }?.self
         }.addBeforeHook({ true }) {
             val pkgName = args(1).string()
-            val isLaunchedFromSystemSurface = instance!!.javaClass.resolve().firstMethod {
-                name = "launchedFromSystemSurface"
-                parameterCount = 0
-            }.toTyped<Boolean>().invoke(instance) ?: false
+            // 惰性求值: 功能未启用 / 不在列表时, 不触发 launchedFromSystemSurface 反射调用
             val isForceShowSS = Preferences.Display.FORCE_SHOW_SPLASH_SCREEN.get()
                     && pkgName in Preferences.AppList.FORCE_SHOW_SPLASH_SCREEN_LIST.get()
-                    && (!Preferences.Display.REDUCE_SPLASH_SCREEN.get() || isLaunchedFromSystemSurface)
+                    && (!Preferences.Display.REDUCE_SPLASH_SCREEN.get()
+                    || launchedFromSystemSurface?.invoke(instance) == true)
 
             if (isForceShowSS) resultTrue()
-            printLog { "[Android] validateStartingWindowTheme():${if (isForceShowSS) "" else " not"} force show $pkgName splash screen, isLaunchedFromSystemSurface: $isLaunchedFromSystemSurface" }
+            printLog { "[Android] validateStartingWindowTheme():${if (isForceShowSS) "" else " not"} force show $pkgName splash screen" }
         }.startHook(module)
 
         // 彻底关闭 Splash Screen

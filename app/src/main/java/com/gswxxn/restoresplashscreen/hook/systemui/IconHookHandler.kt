@@ -24,9 +24,9 @@ import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentC
 import com.gswxxn.restoresplashscreen.hook.systemui.GenerateHookHandler.currentPackageName
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.getDevPrefs
 import com.gswxxn.restoresplashscreen.hook.utils.HookExt.printLog
+import com.gswxxn.restoresplashscreen.hook.utils.RemotePreferences.observe
 import com.gswxxn.restoresplashscreen.hook.utils.ReflectCache
 import com.gswxxn.restoresplashscreen.hook.utils.getValueFrom
-import com.gswxxn.restoresplashscreen.hook.utils.toTyped
 import com.gswxxn.restoresplashscreen.ui.page.data.BGColorModes
 import com.gswxxn.restoresplashscreen.ui.page.data.ChangeBGColorTypes
 import com.gswxxn.restoresplashscreen.ui.page.data.ShrinkIconType
@@ -72,6 +72,17 @@ object IconHookHandler : BaseHookHandler() {
     private val miuiIcons by lazy { XiaomiIconsHelper(appContext!!, appClassLoader) }
 
     /**
+     * 图标主色 LRU 缓存: 主色计算需渲染位图 + Palette 取色, 是启动链路上最贵的纯计算。
+     *
+     * key 含 sourceDir(应用更新后自然失效); 图标来源相关开关变更时在 [onHook] 注册的 observe 中整体清空
+     */
+    private val dominantColorCache = object : LinkedHashMap<String, Int>(16, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Int>): Boolean = size > 128
+    }
+
+    private fun clearDominantColorCache() = synchronized(dominantColorCache) { dominantColorCache.clear() }
+
+    /**
      * 重置当前应用的属性
      */
     fun resetCache() {
@@ -83,6 +94,11 @@ object IconHookHandler : BaseHookHandler() {
 
     /** 开始 Hook */
     override fun onHook() {
+        // 图标来源相关配置变更时清空主色缓存
+        Preferences.Icon.ICON_PACK_PACKAGE_NAME.observe(fireImmediately = false) { clearDominantColorCache() }
+        Preferences.Icon.ENABLE_USE_MIUI_LARGE_ICON.observe(fireImmediately = false) { clearDominantColorCache() }
+        Preferences.Icon.ENABLE_REPLACE_ICON.observe(fireImmediately = false) { clearDominantColorCache() }
+
         SystemUIHooker.Members.getWindowAttrs.addAfterHook {
 
             //忽略应用主动设置的图标
@@ -119,16 +135,22 @@ object IconHookHandler : BaseHookHandler() {
 
         // 模糊背景 + 圆角
         SystemUIHooker.Members.build_SplashScreenViewBuilder.addAfterHook {
+            // 先判开关: 两项功能都不生效时, 不做 mIconView 反射读
+            val needBlurBg = prefs.get(Preferences.Icon.SHRINK_ICON) != ShrinkIconType.NotShrinkIcon.ordinal &&
+                    prefs.get(Preferences.Icon.ENABLE_ADD_ICON_BLUR_BG) &&
+                    currentIsNeedShrinkIcon &&
+                    currentUseBigHyperOSLagerIcon != true
+            // 不为小米大图标绘制圆角
+            val needRoundCorner = prefs.get(Preferences.Display.ENABLE_DRAW_ROUND_CORNER) &&
+                    currentUseBigHyperOSLagerIcon != true
+            if (!needBlurBg && !needRoundCorner) return@addAfterHook
+
             val splashScreenView = result as FrameLayout
             val iconView = ReflectCache.getField<ImageView>(splashScreenView, "mIconView")
                 ?: return@addAfterHook
 
             // 创建模糊背景 View
-            if (prefs.get(Preferences.Icon.SHRINK_ICON) != ShrinkIconType.NotShrinkIcon.ordinal &&
-                prefs.get(Preferences.Icon.ENABLE_ADD_ICON_BLUR_BG) &&
-                currentIsNeedShrinkIcon &&
-                currentUseBigHyperOSLagerIcon != true
-            ) {
+            if (needBlurBg) {
                 val blurIconSize = (appResources!!.getDimensionPixelSize(startingSurfaceIconSizeResId) / 1.5).toInt()
                 val bgIconSize = blurIconSize * 4
 
@@ -161,8 +183,7 @@ object IconHookHandler : BaseHookHandler() {
             }
 
             // 绘制图标圆角
-            // 不为小米大图标绘制圆角
-            if (prefs.get(Preferences.Display.ENABLE_DRAW_ROUND_CORNER) && currentUseBigHyperOSLagerIcon != true) {
+            if (needRoundCorner) {
                 val iconDrawable = ReflectCache.getField<Drawable>(instance!!, "mIconDrawable")
                 when {
                     // 没有图标时不绘制圆角
@@ -205,21 +226,18 @@ object IconHookHandler : BaseHookHandler() {
                 if (boolShrinkNonAdaptiveIconsIndex != -1) {
                     args(boolShrinkNonAdaptiveIconsIndex).set(false)
                 } else {
-                    val normalizer = instance!!.javaClass.resolve().optional().firstMethodOrNull {
-                        name = "getNormalizer"
-                        superclass()
-                    }?.toTyped<Any>()?.invoke(instance)
-                    val scale = normalizer?.javaClass?.resolve()?.optional()?.firstMethodOrNull {
-                        name = "getScale"
-                        parameterCount = 4
-                        superclass()
-                    }?.toTyped<Float>()?.invoke(
-                        normalizer,
-                        args.first { it is Drawable },
-                        args.first { it is RectF },
-                        null,
-                        null
-                    ) ?: 0.92f
+                    // 经 ReflectCache 解析 (按运行时类缓存, 含父类查找), 避免每次启动重复扫描
+                    val normalizer = ReflectCache.invokeMethod<Any>(instance!!, "getNormalizer")
+                    val scale = normalizer?.let {
+                        ReflectCache.invokeMethod<Float>(
+                            it,
+                            "getScale",
+                            args.first { arg -> arg is Drawable },
+                            args.first { arg -> arg is RectF },
+                            null,
+                            null
+                        )
+                    } ?: 0.92f
                     (args(args.indexOfFirst { it is FloatArray }).any() as FloatArray)[0] = scale
                     val oriDrawable = args.first { it is Drawable } as Drawable
                     val returnType = SystemUIHooker.Members.normalizeAndWrapToAdaptiveIcon.returnType
@@ -288,16 +306,15 @@ object IconHookHandler : BaseHookHandler() {
 
         // 获取图标颜色: 仅当背景颜色取自图标时进行
         if (prefs.get(Preferences.Background.CHANG_BG_COLOR_TYPE) == ChangeBGColorTypes.FromIcon.ordinal) {
-            val colorMode = prefs.get(Preferences.Background.BG_COLOR_MODE)
-            val bitmap = GraphicUtils.drawable2Bitmap(iconDrawable, 112)
-            currentIconDominantColor = GraphicUtils.getBgColor(
-                bitmap,
-                when (colorMode) {
-                    BGColorModes.DarkColor.ordinal -> false
-                    BGColorModes.FollowSystem.ordinal -> !isDarkMode(appContext!!)
-                    else -> true
-                }
-            )
+            val isLight = when (prefs.get(Preferences.Background.BG_COLOR_MODE)) {
+                BGColorModes.DarkColor.ordinal -> false
+                BGColorModes.FollowSystem.ordinal -> !isDarkMode(appContext!!)
+                else -> true
+            }
+            val cacheKey = "$currentPackageName|$currentComponentName|${currentApplicationInfo?.sourceDir}|$isLight"
+            currentIconDominantColor = synchronized(dominantColorCache) { dominantColorCache[cacheKey] }
+                ?: GraphicUtils.getBgColor(GraphicUtils.drawable2Bitmap(iconDrawable, 112), isLight)
+                    .also { synchronized(dominantColorCache) { dominantColorCache[cacheKey] = it } }
         }
 
         // 移除 HyperOS 为自适应图标强制添加的边缘描边

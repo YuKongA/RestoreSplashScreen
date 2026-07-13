@@ -163,17 +163,20 @@ object SystemUIHooker {
         this.module = module
         this.classLoader = classLoader
 
-        HookManager {
+        val attachHook = HookManager {
             "android.app.Application".toClass(loader = classLoader).resolve().optional().firstMethodOrNull {
                 name = "attachBaseContext"
                 parameters(Context::class)
                 superclass()
             }?.self
-        }.addAfterHook({ true }) {
+        }
+        attachHook.addAfterHook({ true }) {
             if (isHooked) return@addAfterHook
             appContext = args(0).any() as? Context
             isHooked = true
             onHook()
+            // Context 已捕获、功能 Hook 已安装，此 hook 使命完成，自摘除避免后续空转
+            attachHook.unhook()
         }.startHook(module)
     }
 
@@ -204,12 +207,12 @@ object SystemUIHooker {
             OplusHookHandler
         )
 
-        // 执行 Hook
+        // 执行 Hook；toggle 绑定的成员由各自的 bindInstallToggle 自管安装状态，跳过此无条件循环
         Members.javaClass.declaredFields.forEach { field ->
             field.makeAccessible()
             val hookManager = field.get(null)
 
-            if (hookManager is HookManager) try {
+            if (hookManager is HookManager && !hookManager.isToggleBound) try {
                 hookManager.startHook(module)
             } catch (e: Throwable) {
                 XMLog.e(e)
