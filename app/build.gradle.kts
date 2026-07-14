@@ -47,6 +47,12 @@ android {
         includeInBundle = false
     }
 
+    packaging {
+        jniLibs {
+            excludes += "lib/*/libandroidx.graphics.path.so"
+        }
+    }
+
     val keystorePath = secret("KEYSTORE_PATH")
     val keystorePass = secret("KEYSTORE_PASS")
     val signingKeyAlias = secret("KEY_ALIAS")
