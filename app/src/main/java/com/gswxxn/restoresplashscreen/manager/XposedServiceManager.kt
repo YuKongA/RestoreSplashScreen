@@ -3,12 +3,10 @@ package com.gswxxn.restoresplashscreen.manager
 import com.gswxxn.restoresplashscreen.data.Scope
 import com.gswxxn.restoresplashscreen.utils.XMLog
 import io.github.libxposed.service.HookedTarget
-import io.github.libxposed.service.HotReloadResult
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.atomic.AtomicInteger
 
 class XposedServiceManager : XposedServiceHelper.OnServiceListener {
     private val _serviceFlow = MutableStateFlow<XposedService?>(null)
@@ -57,43 +55,6 @@ class XposedServiceManager : XposedServiceHelper.OnServiceListener {
             systemUI = targets.needRestart(Scope.SYSTEM_UI) ?: false,
             android = targets.needRestart(SYSTEM_SERVER_PROCESS)
         )
-    }
-
-    /**
-     * 对所有"仍在运行旧代码"（[HookedTarget.State.STALE] / [HookedTarget.State.FAILED]）的目标进程
-     * 触发热重载，免重启地应用模块更新。需框架支持 service API 102。
-     *
-     * 注意：[onComplete] 在最后一个请求返回时回调，可能运行在 **Binder 线程**，调用方需自行切回主线程。
-     *
-     * @param onComplete 全部请求返回后回调：(成功数, 总数)
-     * @return 是否成功发起（框架不支持 / 无服务时返回 false；无 STALE 目标时返回 true 且立即回调 0/0）
-     */
-    fun hotReloadStaleTargets(onComplete: (succeeded: Int, total: Int) -> Unit): Boolean {
-        val service = currentService ?: return false
-        if (service.apiVersion < XposedService.API_102) return false
-        val targets = runCatching { service.runningTargets }.getOrNull() ?: return false
-        val stale = targets.filter {
-            it.state == HookedTarget.State.STALE || it.state == HookedTarget.State.FAILED
-        }
-        if (stale.isEmpty()) {
-            onComplete(0, 0)
-            return true
-        }
-        val total = stale.size
-        val done = AtomicInteger(0)
-        val succeeded = AtomicInteger(0)
-        stale.forEach { target ->
-            runCatching {
-                service.hotReloadModule(target, null) { _, result ->
-                    if (result.status == HotReloadResult.Status.SUCCEEDED) succeeded.incrementAndGet()
-                    if (done.incrementAndGet() == total) onComplete(succeeded.get(), total)
-                }
-            }.onFailure {
-                XMLog.e(it)
-                if (done.incrementAndGet() == total) onComplete(succeeded.get(), total)
-            }
-        }
-        return true
     }
 
     /**

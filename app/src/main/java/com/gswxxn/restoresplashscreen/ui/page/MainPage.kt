@@ -1,6 +1,5 @@
 package com.gswxxn.restoresplashscreen.ui.page
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
@@ -15,7 +14,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
@@ -30,7 +28,6 @@ import com.gswxxn.restoresplashscreen.BuildConfig
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.data.Pages
 import com.gswxxn.restoresplashscreen.data.Route
-import com.gswxxn.restoresplashscreen.manager.XposedServiceManager
 import com.gswxxn.restoresplashscreen.ui.MainActivity
 import com.gswxxn.restoresplashscreen.ui.MainActivity.Companion.androidRestartNeeded
 import com.gswxxn.restoresplashscreen.ui.MainActivity.Companion.moduleActive
@@ -46,8 +43,6 @@ import dev.lackluster.hyperx.navigation.Navigator
 import dev.lackluster.hyperx.ui.component.ImageIcon
 import dev.lackluster.hyperx.ui.layout.HyperXPage
 import dev.lackluster.hyperx.ui.preference.PreferenceGroup
-import kotlinx.coroutines.launch
-import org.koin.compose.koinInject
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
@@ -217,14 +212,11 @@ private fun SettingItems(
 }
 
 
-@SuppressLint("LocalContextGetResourceValueCall")
 @Composable
 private fun RestartDialog(
     show: MutableState<Boolean>
 ) {
     val context = LocalContext.current
-    val serviceManager = koinInject<XposedServiceManager>()
-    val scope = rememberCoroutineScope()
     OverlayDialog(
         title = stringResource(R.string.restart_title),
         summary = stringResource(R.string.restart_message),
@@ -252,30 +244,6 @@ private fun RestartDialog(
                     execShell("pkill -f com.android.systemui && pkill -f com.gswxxn.restoresplashscreen")
                     Thread.sleep(300)
                     context.toast(R.string.no_root)
-                }
-            )
-            Spacer(Modifier.height(12.dp))
-
-            // 执行热重载 按钮
-            TextButton(
-                modifier = Modifier.fillMaxWidth(),
-                text = stringResource(R.string.hot_reload),
-                onClick = {
-                    val started = serviceManager.hotReloadStaleTargets { succeeded, total ->
-                        scope.launch {
-                            if (total == 0) {
-                                context.toast(R.string.hot_reload_none)
-                            } else {
-                                context.toast(context.getString(R.string.hot_reload_result, succeeded, total))
-                            }
-                            serviceManager.queryRestartState()?.let {
-                                systemUIRestartNeeded.value = it.systemUI
-                                androidRestartNeeded.value = it.android
-                            }
-                            show.value = false
-                        }
-                    }
-                    if (!started) context.toast(R.string.hot_reload_unsupported)
                 }
             )
             Spacer(Modifier.height(12.dp))

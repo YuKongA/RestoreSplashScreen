@@ -17,10 +17,6 @@
     <string name="restart_message">作用域未勾选「系统框架」时无需重启手机</string>
     <string name="reboot">重启手机</string>
     <string name="restart_system_ui">重启系统界面</string>
-    <string name="hot_reload">执行热重载</string>
-    <string name="hot_reload_unsupported">当前框架版本不支持热重载，需「LSPosed API 102+」</string>
-    <string name="hot_reload_none">没有需要更新的进程</string>
-    <string name="hot_reload_result">热重载完成：%1$d / %2$d 个进程成功</string>
     <string name="button_cancel">取消</string>
     <string name="button_abandonment">舍弃修改</string>
     <string name="button_reedit">返回编辑</string>
