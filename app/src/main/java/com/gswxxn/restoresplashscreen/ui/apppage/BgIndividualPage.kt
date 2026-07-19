@@ -40,6 +40,7 @@ import com.gswxxn.restoresplashscreen.ui.component.SpliceCard
 import com.gswxxn.restoresplashscreen.ui.component.TextPreference
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.toMap
 import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
+import dev.lackluster.hyperx.core.utils.HanziToPinyin
 import dev.lackluster.hyperx.navigation.LocalNavigator
 import dev.lackluster.hyperx.ui.component.IconSize
 import dev.lackluster.hyperx.ui.component.ImageIcon
@@ -154,7 +155,8 @@ fun BgIndividualPage() {
                 appInfoList
             } else {
                 appInfoList.filter {
-                    it.appName.contains(queryString, true) || it.packageName.contains(queryString, true)
+                    it.appName.contains(queryString, true) || it.packageName.contains(queryString, true) ||
+                            HanziToPinyin.toPinyin(it.appName).contains(queryString, true)
                 }
             }
 

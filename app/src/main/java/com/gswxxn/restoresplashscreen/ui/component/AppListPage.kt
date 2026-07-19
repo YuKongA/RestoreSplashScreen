@@ -56,6 +56,7 @@ import androidx.core.graphics.drawable.toBitmap
 import com.gswxxn.restoresplashscreen.R
 import com.gswxxn.restoresplashscreen.utils.CommonUtils.notEqualsTo
 import com.gswxxn.restoresplashscreen.utils.RemotePreferenceStore
+import dev.lackluster.hyperx.core.utils.HanziToPinyin
 import dev.lackluster.hyperx.navigation.LocalNavigator
 import dev.lackluster.hyperx.ui.preference.core.PreferenceKey
 import org.koin.compose.koinInject
@@ -232,7 +233,8 @@ fun AppListPage(
                 appInfoList
             } else {
                 appInfoList.filter {
-                    it.appName.contains(queryString, true) || it.packageName.contains(queryString, true)
+                    it.appName.contains(queryString, true) || it.packageName.contains(queryString, true) ||
+                            HanziToPinyin.toPinyin(it.appName).contains(queryString, true)
                 }
             }
 

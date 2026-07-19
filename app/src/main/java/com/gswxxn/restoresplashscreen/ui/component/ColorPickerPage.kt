@@ -57,7 +57,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -130,7 +129,7 @@ import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.Back
 import top.yukonga.miuix.kmp.theme.MiuixTheme
-import top.yukonga.miuix.kmp.theme.miuixShape
+import top.yukonga.miuix.kmp.squircle.squircleClip
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import kotlin.math.pow
 import kotlin.math.round
@@ -893,7 +892,7 @@ private fun HueSeekBar(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(28.dp)
-                        .clip(miuixShape(28.dp))
+                        .squircleClip(28.dp)
                         .drawBehind {
                             val barHeight = size.height
                             val barWidth = size.width
