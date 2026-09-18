@@ -249,10 +249,27 @@ object IconHookHandler : BaseHookHandler() {
             }
         }
 
+        SystemUIHooker.Members.createScaledBitmap_BaseIconFactory.addBeforeHook {
+            if (isInMakeSplashScreenContentView.get() == true) {
+                (args(0).any() as? Drawable)?.let { drawable ->
+                    printLog { "createScaledBitmap_BaseIconFactory(): avoid shrink icon by system ui" }
+                    val size = ReflectCache.getField<Int>(instance!!, "iconBitmapSize")
+                        ?: ReflectCache.getField<Int>(instance!!, "mIconBitmapSize")
+                        ?: getIconSize(drawable)
+                    result = GraphicUtils.drawable2Bitmap(drawable, size)
+                }
+            }
+        }
+
         SystemUIHooker.Members.createIconBitmap_BaseIconFactory.addBeforeHook {
-            (args(0).any() as? Drawable)?.let { drawable ->
-                printLog { "createIconBitmap_BaseIconFactory(): avoid shrink icon by system ui" }
-                result = GraphicUtils.drawable2Bitmap(drawable, getIconSize(drawable))
+            if (isInMakeSplashScreenContentView.get() == true) {
+                (args(0).any() as? Drawable)?.let { drawable ->
+                    printLog { "createIconBitmap_BaseIconFactory(): avoid shrink icon by system ui" }
+                    val size = ReflectCache.getField<Int>(instance!!, "iconBitmapSize")
+                        ?: ReflectCache.getField<Int>(instance!!, "mIconBitmapSize")
+                        ?: getIconSize(drawable)
+                    result = GraphicUtils.drawable2Bitmap(drawable, size)
+                }
             }
         }
 

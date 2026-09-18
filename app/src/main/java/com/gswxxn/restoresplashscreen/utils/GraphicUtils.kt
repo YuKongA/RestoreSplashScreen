@@ -26,12 +26,23 @@ object GraphicUtils {
      * @return [Bitmap]
      */
     fun drawable2Bitmap(drawable: Drawable, size: Int): Bitmap {
-        if (drawable is BitmapDrawable) {
+        if (drawable is BitmapDrawable && drawable.bitmap.width == size && drawable.bitmap.height == size) {
             return drawable.bitmap
         }
         val bitmap = createBitmap(size, size)
         val canvas = Canvas(bitmap)
-        drawable.setBounds(0, 0, size, size)
+        val w = drawable.intrinsicWidth
+        val h = drawable.intrinsicHeight
+        if (w > 0 && h > 0) {
+            val scale = minOf(size.toFloat() / w, size.toFloat() / h)
+            val dw = (w * scale).toInt()
+            val dh = (h * scale).toInt()
+            val left = (size - dw) / 2
+            val top = (size - dh) / 2
+            drawable.setBounds(left, top, left + dw, top + dh)
+        } else {
+            drawable.setBounds(0, 0, size, size)
+        }
         drawable.draw(canvas)
         canvas.setBitmap(null)
         return bitmap

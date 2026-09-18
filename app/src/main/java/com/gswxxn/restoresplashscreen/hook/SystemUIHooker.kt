@@ -79,25 +79,42 @@ object SystemUIHooker {
                 ?.resolve()?.optional()?.firstConstructorOrNull()?.self
         }
         val getIcon_IconProvider = HookManager(!isColorOS) {
-            "com.android.launcher3.icons.IconProvider".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
-                name = "getIcon"
-                parameterCount = 2
-                parameters { types ->
-                    Integer.TYPE in types &&
-                            (classOf<ActivityInfo>() in types || classOf<ComponentInfo>() in types)
-                }
-            }?.self
+            ("com.android.miui.launcher3x.icons.IconProvider".toClassOrNull(loader = classLoader)
+                ?: "com.android.launcher3.icons.IconProvider".toClassOrNull(loader = classLoader))
+                ?.resolve()?.optional()?.firstMethodOrNull {
+                    name = "getIcon"
+                    parameterCount = 2
+                    parameters { types ->
+                        Integer.TYPE in types &&
+                                (classOf<ActivityInfo>() in types || classOf<ComponentInfo>() in types)
+                    }
+                }?.self
         }
         val normalizeAndWrapToAdaptiveIcon = HookManager {
-            "com.android.launcher3.icons.BaseIconFactory".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
-                name = "normalizeAndWrapToAdaptiveIcon"
-            }?.self
+            ("com.android.miui.launcher3x.icons.BaseIconFactory".toClassOrNull(loader = classLoader)
+                ?: "com.android.launcher3.icons.BaseIconFactory".toClassOrNull(loader = classLoader))
+                ?.resolve()?.optional()?.firstMethodOrNull {
+                    name = "normalizeAndWrapToAdaptiveIcon"
+                }?.self
         }
         val createIconBitmap_BaseIconFactory = HookManager {
-            "com.android.launcher3.icons.BaseIconFactory".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
-                name = "createIconBitmap"
-                parameters(android.graphics.drawable.Drawable::class, Float::class, Int::class)
-            }?.self
+            ("com.android.miui.launcher3x.icons.BaseIconFactory".toClassOrNull(loader = classLoader)
+                ?: "com.android.launcher3.icons.BaseIconFactory".toClassOrNull(loader = classLoader))
+                ?.resolve()?.optional()?.firstMethodOrNull {
+                    name = "createIconBitmap"
+                    parameters(android.graphics.drawable.Drawable::class, Float::class, Int::class)
+                }?.self
+        }
+        val createScaledBitmap_BaseIconFactory = HookManager {
+            ("com.android.miui.launcher3x.icons.BaseIconFactory".toClassOrNull(loader = classLoader)
+                ?: "com.android.launcher3.icons.BaseIconFactory".toClassOrNull(loader = classLoader))
+                ?.resolve()?.optional()?.firstMethodOrNull {
+                    name = "createScaledBitmap"
+                    parameterCount = 2
+                    parameters { types ->
+                        classOf<android.graphics.drawable.Drawable>() in types && Integer.TYPE in types
+                    }
+                }?.self
         }
         val build_SplashScreenViewBuilder = HookManager {
             $$"android.window.SplashScreenView$Builder".toClassOrNull(loader = classLoader)?.resolve()?.optional()?.firstMethodOrNull {
