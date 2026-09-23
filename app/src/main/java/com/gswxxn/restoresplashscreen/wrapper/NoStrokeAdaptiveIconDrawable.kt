@@ -14,50 +14,53 @@ import java.lang.reflect.Method
 class NoStrokeAdaptiveIconDrawable private constructor(
     background: Drawable?,
     foreground: Drawable?,
-    monochrome: Drawable?
+    monochrome: Drawable?,
+    private val getBorderMode: Method?,
+    private val setBorderMode: Method?,
+    private val getIsIconStroke: Method?,
+    private val setIsIconStroke: Method?
 ) : AdaptiveIconDrawable(background, foreground, monochrome) {
 
     override fun draw(canvas: Canvas) {
-        val getter = getIsIconStroke
-        val setter = setIsIconStroke
-        if (getter == null || setter == null) {
+        val borderModeSetter = setBorderMode
+        val previousMode = runCatching { getBorderMode?.invoke(null) as? Int }.getOrNull()
+        val previousStroke = runCatching { getIsIconStroke?.invoke(null) as? Boolean }.getOrNull()
+        if (previousMode == null && previousStroke == null) {
             super.draw(canvas)
             return
         }
-        val previous = runCatching { getter.invoke(null) as Boolean }.getOrDefault(true)
         try {
-            runCatching { setter.invoke(null, false) }
+            if (getBorderMode != null && borderModeSetter != null) {
+                runCatching { borderModeSetter.invoke(null, 0) }
+            } else {
+                runCatching { setIsIconStroke?.invoke(null, false) }
+            }
             super.draw(canvas)
         } finally {
-            runCatching { setter.invoke(null, previous) }
+            when {
+                previousMode != null && borderModeSetter != null ->
+                    runCatching { borderModeSetter.invoke(null, previousMode) }
+                previousStroke != null -> runCatching { setIsIconStroke?.invoke(null, previousStroke) }
+            }
         }
     }
 
     companion object {
-        private val iconCustomizerClass by lazy {
-            "miui.content.res.IconCustomizer".toClassOrNull()
-        }
-        private val getIsIconStroke: Method? by lazy {
-            runCatching {
-                iconCustomizerClass
-                    ?.getDeclaredMethod("getIsIconStroke")
-                    ?.apply { makeAccessible() }
-            }.getOrNull()
-        }
-        private val setIsIconStroke: Method? by lazy {
-            runCatching {
-                iconCustomizerClass
-                    ?.getDeclaredMethod("setIsIconStroke", classOf<Boolean>())
-                    ?.apply { makeAccessible() }
-            }.getOrNull()
-        }
-
         /**
          * 用 [src] 的前景/背景/单色图层重建一个无描边版本
          */
-        fun from(src: AdaptiveIconDrawable): AdaptiveIconDrawable =
+        fun from(src: AdaptiveIconDrawable, classLoader: ClassLoader): AdaptiveIconDrawable =
             runCatching {
-                NoStrokeAdaptiveIconDrawable(src.background, src.foreground, src.monochrome)
+                val iconCustomizerClass = "miui.content.res.IconCustomizer".toClassOrNull(loader = classLoader)
+                NoStrokeAdaptiveIconDrawable(
+                    src.background,
+                    src.foreground,
+                    src.monochrome,
+                    iconCustomizerClass?.getDeclaredMethod("getIconBorderMode")?.apply { makeAccessible() },
+                    iconCustomizerClass?.getDeclaredMethod("setIconBorderMode", classOf<Int>())?.apply { makeAccessible() },
+                    iconCustomizerClass?.getDeclaredMethod("getIsIconStroke")?.apply { makeAccessible() },
+                    iconCustomizerClass?.getDeclaredMethod("setIsIconStroke", classOf<Boolean>())?.apply { makeAccessible() }
+                )
             }.getOrDefault(src)
     }
 }

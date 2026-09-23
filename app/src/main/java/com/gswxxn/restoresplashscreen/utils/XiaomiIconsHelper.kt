@@ -3,8 +3,14 @@ package com.gswxxn.restoresplashscreen.utils
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageItemInfo
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Rect
+import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.graphics.drawable.LayerDrawable
 import android.os.UserHandle
 import android.provider.Settings
 import com.gswxxn.restoresplashscreen.hook.SystemUIHooker
@@ -32,8 +38,26 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
         )
     }
 
+    /**
+     * HyperOS 4 起, 大图标与 MAML 图标实现已从 com.miui.home 迁移到
+     * miui.systemui.plugin, 需要通过插件包的 ClassLoader 加载。
+     */
+    private val systemUiPluginContext by lazy {
+        context.createPackageContext(
+            "miui.systemui.plugin",
+            Context.CONTEXT_INCLUDE_CODE or Context.CONTEXT_IGNORE_SECURITY
+        )
+    }
+
+    /** 按 SystemUI -> SystemUI 插件 -> 小米桌面 的顺序查找宿主类。 */
+    private fun loadHostClass(name: String): Class<Any>? =
+        name.toClassOrNull(loader = classLoader)
+            ?: runCatching { name.toClassOrNull(loader = systemUiPluginContext.classLoader) }.getOrNull()
+            ?: runCatching { name.toClassOrNull(loader = miuiHomeContext.classLoader) }.getOrNull()
+
     private val largeIconsHelperClazz by lazy {
-        "com.miui.maml.util.LargeIconsHelper".toClass(loader = miuiHomeContext.classLoader)
+        loadHostClass("com.miui.maml.util.LargeIconsHelper")
+            ?: "com.miui.maml.util.LargeIconsHelper".toClass(loader = miuiHomeContext.classLoader)
     }
 
     private val dependencyClazz by lazy {
@@ -75,6 +99,17 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
     private val appIconsManager by lazy {
         mDependencyGet?.invoke(null, appIconsManagerClazz)
             ?: mImplManagerGet?.invoke(null, appIconsManagerClazz)
+    }
+
+    private val appIconsHelperClazz by lazy {
+        loadHostClass("com.miui.maml.util.AppIconsHelper")
+    }
+
+    private val getIconDrawableMethod by lazy {
+        appIconsHelperClazz?.resolve()?.optional()?.firstMethodOrNull {
+            name = "getIconDrawable"
+            parameters(Context::class, PackageItemInfo::class, PackageManager::class)
+        }?.self
     }
 
     private val drawableUtilsClazz by lazy {
@@ -135,7 +170,7 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
         try {
             // 防止获取到 System UI 的 Resources
             HookManager(true) {
-                "miuix.pickerwidget.date.CalendarFormatSymbols".toClassOrNull(loader = miuiHomeContext.classLoader)
+                loadHostClass("miuix.pickerwidget.date.CalendarFormatSymbols")
                     ?.resolve()?.optional()?.firstMethodOrNull { name = "getWeekDays" }?.self
             }.addReplaceHook({ true }) {
                 val resources = miuiHomeContext.resources
@@ -145,7 +180,7 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
 
             // 为获取完美图标时设置一个缓存时间, 避免获取费时图标(如天气)时, 经常显示不出数据的问题 原调用为固定值 0.
             HookManager(true) {
-                "com.miui.maml.util.AppIconsHelper".toClassOrNull(loader = miuiHomeContext.classLoader)
+                appIconsHelperClazz
                     ?.resolve()?.optional()?.firstMethodOrNull { name = "getFancyIconDrawable" }?.self
             }.addBeforeHook({ true }) {
                 val packageName = args(args.indexOfFirst { it is String }).string()
@@ -155,7 +190,7 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
 
             // 只获取本地天气数据, 不获取网络数据; 参考 https://zhuti.designer.xiaomi.com/docs/blog/weatherApi.html
             HookManager(true) {
-                "com.miui.maml.data.ContentProviderBinder".toClassOrNull(loader = miuiHomeContext.classLoader)
+                loadHostClass("com.miui.maml.data.ContentProviderBinder")
                     ?.resolve()?.optional()?.firstMethodOrNull { name = "getUriText" }?.self
             }.addAfterHook({ true }) {
                 if (result == "content://weather/actualWeatherData/1")
@@ -164,8 +199,8 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
 
             // 由于大图标的变更通知不到系统界面, 所以只能每次都重新读取配置
             HookManager(true) {
-                "com.miui.maml.util.LargeIconsHelper".toClassOrNull(loader = miuiHomeContext.classLoader)
-                    ?.resolve()?.optional()?.firstMethodOrNull { name = "hasLargeIcon" }?.self
+                largeIconsHelperClazz
+                    .resolve().optional().firstMethodOrNull { name = "hasLargeIcon" }?.self
             }.addBeforeHook({ true }) {
                 sManagerListField?.setValueTo(null, null)
             }.startHook(SystemUIHooker.module)
@@ -219,6 +254,7 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
             null, miuiHomeContext, packageName, null, "desktop", null, 0L, userHandleCurrent
         )?.let { largeIcon ->
             ReflectCache.invokeMethod<Drawable>(largeIcon, "getDrawable")
+                ?.let(::resolveDynamicDrawable)
         }
     } catch (e: Throwable) {
         XMLog.e(t = e) { "Failed to get large icon drawable for package $packageName" }
@@ -237,19 +273,149 @@ class XiaomiIconsHelper(private val context: Context, private val classLoader: C
         packageName: String,
         userId: Int,
         applicationInfo: ApplicationInfo?
-    ) = try {
-        val pm = SystemUIHooker.appContext!!.packageManager
-        loadAppIcon.invoke(
-            appIconsManager,
-            packageName,
-            userId,
-            applicationInfo,
-            pm
-        )
-    } catch (_: Throwable) {
-        val pm = SystemUIHooker.appContext!!.packageManager
-        getActivityIconOrApp(pm)
-    } as Drawable?
+    ): Drawable? {
+        ensureHooksInstalled()
+        val pm = SystemUIHooker.appContext?.packageManager ?: return null
+        val rawDrawable = getRawFancyIconDrawable(applicationInfo, pm)?.let(::resolveDynamicDrawable)
+        val managerDrawable = runCatching {
+            loadAppIcon.invoke(
+                appIconsManager,
+                packageName,
+                userId,
+                applicationInfo,
+                pm
+            ) as? Drawable
+        }.getOrNull()?.let(::resolveDynamicDrawable)
+
+        // 首次调用会初始化 MAML/RendererCore 缓存。AppIconsManager 返回位图时再取一次，
+        // 避免冷启动第一次仍拿到尚未建立完成的静态图标。
+        val warmedRawDrawable = if (managerDrawable is BitmapDrawable) {
+            getRawFancyIconDrawable(applicationInfo, pm)?.let(::resolveDynamicDrawable)
+                ?: rawDrawable
+        } else {
+            rawDrawable
+        }
+
+        // AppIconsManager 会把部分主题图标转为低分辨率 BitmapDrawable。
+        // 原始 Drawable 可保留矢量/MAML 图层, 同时让无描边处理继续生效。
+        return when {
+            managerDrawable is BitmapDrawable && warmedRawDrawable != null -> warmedRawDrawable
+            managerDrawable != null -> managerDrawable
+            warmedRawDrawable != null -> warmedRawDrawable
+            else -> getActivityIconOrApp(pm)
+        }
+    }
+
+    private fun getRawFancyIconDrawable(
+        applicationInfo: ApplicationInfo?,
+        packageManager: PackageManager
+    ): Drawable? = runCatching {
+        if (applicationInfo == null) null
+        else getIconDrawableMethod?.invoke(null, context, applicationInfo, packageManager) as? Drawable
+    }.getOrNull()
+
+    /**
+     * 将桌面图标的静态外壳替换为其动态 MAML 内容。
+     *
+     * - [AnimatingDrawable] 默认只绘制 quietImage, 动态内容需取 getFancyDrawable()
+     * - AdaptiveIconDrawable 的动态背景/前景层需要展开后再交给 AdaptiveIconDrawable 绘制
+     * - [LargeIconDrawable] 是资源包装器, 需要先取出内部 Drawable
+     */
+    fun resolveDynamicDrawable(drawable: Drawable?): Drawable? {
+        drawable ?: return null
+        val resolved = when (drawable.javaClass.name) {
+            "com.miui.maml.AnimatingDrawable" ->
+                ReflectCache.invokeMethod<Drawable>(drawable, "getFancyDrawable") ?: drawable
+
+            "com.miui.maml.LargeIconDrawable" ->
+                ReflectCache.invokeMethod<Drawable>(drawable, "getDrawable")
+                    ?.let(::resolveDynamicDrawable) ?: drawable
+
+            else -> if (drawable is android.graphics.drawable.AdaptiveIconDrawable) {
+                resolveDynamicAdaptiveDrawable(drawable)
+            } else {
+                drawable
+            }
+        }
+        return resolved
+    }
+
+    /**
+     * 激活并预热动态 MAML 图层。
+     *
+     * SplashScreen 不会像桌面 IconView 一样分发 Drawable 生命周期回调, 新建的 FancyDrawable
+     * 首次绘制可能仍是未初始化状态。这里主动 resume 并绘制一次, 确保首启即为真实内容。
+     */
+    fun warmUpDynamicDrawable(drawable: Drawable, size: Int) {
+        if (size <= 0 || !resumeDynamicDrawable(drawable)) return
+        val previousBounds = Rect(drawable.bounds)
+        runCatching {
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            drawable.setBounds(0, 0, size, size)
+            drawable.draw(canvas)
+            canvas.setBitmap(null)
+            bitmap.recycle()
+        }
+        drawable.bounds = previousBounds
+    }
+
+    private fun resumeDynamicDrawable(drawable: Drawable?): Boolean {
+        drawable ?: return false
+        var resumed = false
+        when {
+            drawable.javaClass.name == "com.miui.maml.FancyDrawable" -> {
+                ReflectCache.invokeMethod<Any>(drawable, "onResume")
+                resumed = true
+            }
+
+            drawable is android.graphics.drawable.AdaptiveIconDrawable -> {
+                resumed = resumeDynamicDrawable(drawable.background) or resumed
+                resumed = resumeDynamicDrawable(drawable.foreground) or resumed
+            }
+
+            drawable is LayerDrawable -> {
+                for (index in 0 until drawable.numberOfLayers) {
+                    resumed = resumeDynamicDrawable(drawable.getDrawable(index)) or resumed
+                }
+            }
+        }
+        return resumed
+    }
+
+    private fun resolveDynamicAdaptiveDrawable(
+        src: android.graphics.drawable.AdaptiveIconDrawable
+    ): Drawable {
+        val background = resolveDynamicDrawable(src.background) ?: src.background
+        val foreground = resolveDynamicLayerDrawable(src.foreground) ?: src.foreground
+        if (background === src.background && foreground === src.foreground) return src
+        return android.graphics.drawable.AdaptiveIconDrawable(background, foreground)
+    }
+
+    private fun resolveDynamicLayerDrawable(src: Drawable?): Drawable? {
+        if (src !is LayerDrawable) return resolveDynamicDrawable(src)
+
+        val layers = Array(src.numberOfLayers) { index ->
+            val layer = src.getDrawable(index)
+            resolveDynamicDrawable(layer) ?: layer
+        }
+        if (layers.indices.all { layers[it] === src.getDrawable(it) }) return src
+
+        return LayerDrawable(layers).apply {
+            for (index in layers.indices) {
+                runCatching { setLayerGravity(index, src.getLayerGravity(index)) }
+                runCatching {
+                    setLayerInset(
+                        index,
+                        src.getLayerInsetLeft(index),
+                        src.getLayerInsetTop(index),
+                        src.getLayerInsetRight(index),
+                        src.getLayerInsetBottom(index)
+                    )
+                }
+            }
+        }
+    }
 
     /**
      * 返回给定包名的缓存时间。

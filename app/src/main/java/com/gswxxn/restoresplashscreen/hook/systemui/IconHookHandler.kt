@@ -310,12 +310,18 @@ object IconHookHandler : BaseHookHandler() {
 
         // 检索图标优先级: 使用小米大图标 -> 使用图标包 -> 替换获取图标方式 -> 原始图标
         val iconDrawable = getHyperOSLargeIcon() ?: getIconFromIconPack() ?: replaceWayOfGetIcons() ?: oriDrawable
+        val resolvedIconDrawable = if (isHyperOS) {
+            miuiIcons.resolveDynamicDrawable(iconDrawable) ?: iconDrawable
+        } else {
+            iconDrawable
+        }
+        if (isHyperOS) miuiIcons.warmUpDynamicDrawable(resolvedIconDrawable, iconSize)
 
         // 判断是否需要缩小图标
         when (shrinkIconType) {
             ShrinkIconType.NotShrinkIcon.ordinal -> currentIsNeedShrinkIcon = false
             ShrinkIconType.ShrinkLowResolutionIcon.ordinal -> currentIsNeedShrinkIcon =
-                if (iconDrawable !is AdaptiveIconDrawable) iconDrawable.intrinsicWidth < iconSize / 1.5 else false
+                if (resolvedIconDrawable !is AdaptiveIconDrawable) resolvedIconDrawable.intrinsicWidth < iconSize / 1.5 else false
 
             ShrinkIconType.ShrinkAllIcon.ordinal -> currentIsNeedShrinkIcon = true
         }
@@ -330,17 +336,17 @@ object IconHookHandler : BaseHookHandler() {
             }
             val cacheKey = "$currentPackageName|$currentComponentName|${currentApplicationInfo?.sourceDir}|$isLight"
             currentIconDominantColor = synchronized(dominantColorCache) { dominantColorCache[cacheKey] }
-                ?: GraphicUtils.getBgColor(GraphicUtils.drawable2Bitmap(iconDrawable, 112), isLight)
+                ?: GraphicUtils.getBgColor(GraphicUtils.drawable2Bitmap(resolvedIconDrawable, 112), isLight)
                     .also { synchronized(dominantColorCache) { dominantColorCache[cacheKey] = it } }
         }
 
         // 移除 HyperOS 为自适应图标强制添加的边缘描边
         val finalIconDrawable =
-            if (isHyperOS && iconDrawable is AdaptiveIconDrawable && prefs.get(Preferences.Icon.ENABLE_REMOVE_ICON_STROKE)) {
+            if (isHyperOS && resolvedIconDrawable is AdaptiveIconDrawable && prefs.get(Preferences.Icon.ENABLE_REMOVE_ICON_STROKE)) {
                 printLog { "getIcon(): remove icon stroke" }
-                NoStrokeAdaptiveIconDrawable.from(iconDrawable)
+                NoStrokeAdaptiveIconDrawable.from(resolvedIconDrawable, appClassLoader)
             } else {
-                iconDrawable
+                resolvedIconDrawable
             }
         currentIconDrawable = finalIconDrawable
         return finalIconDrawable
